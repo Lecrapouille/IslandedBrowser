@@ -5,6 +5,7 @@ This is a in gestation personal experience for the [Stigmee](https://github.com/
 Notes:
 - I wrote *bookmarks* not *tabs* because I never have 500 tabs opened in my browser but have so many unorganized bookmarks.
 - I used Firefox, I do not use Chrome browser but I guess the process is identical.
+- You can see my [Youtube video](https://youtu.be/_IjCipUK8Bk)
 
 ## Compilation process
 
