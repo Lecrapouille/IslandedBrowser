@@ -24,15 +24,19 @@
 */
 
 #include "ForceDirectedGraph.hpp"
+#include "Settings.hpp"
 
-ForceDirectedGraph::ForceDirectedGraph(sf::Vector2f const dimension, Graph& graph)
-    : m_graph(graph), m_width(dimension.x), m_height(dimension.y)
+//------------------------------------------------------------------------------
+ForceDirectedGraph::ForceDirectedGraph(sf::Vector2f const dimension, DiGraph& digraph)
+    : m_digraph(digraph), m_width(dimension.x), m_height(dimension.y)
 {}
 
+//------------------------------------------------------------------------------
 void ForceDirectedGraph::reset()
 {
     // convert std::set to std::vector to have direct access
-    std::vector<Graph::Node> nodes(m_graph.nodes().begin(), m_graph.nodes().end());
+    std::vector<DiGraph::Node> nodes(m_digraph.nodes().begin(),
+                                     m_digraph.nodes().end());
     N = nodes.size();
     K = sqrtf(m_width * m_height / float(N));
     m_temperature = m_width + m_height;
@@ -47,6 +51,9 @@ void ForceDirectedGraph::reset()
         v.position.y *= m_height;
         v.displacement.x = 0.0f;
         v.displacement.y = 0.0f;
+        v.color = (m_digraph.degree(v.id) == 0u)
+                  ? BOOKMARK_COLOR
+                  : FOLDER_COLOR;
     }
 
     // Lookup table: Node ID to index on the vector
@@ -60,7 +67,7 @@ void ForceDirectedGraph::reset()
     for (size_t n = 0u; n < N; ++n)
     {
         Vertex& v = m_vertices[n];
-        Graph::Neighbors const& neighbors = m_graph.neighbors(v.id);
+        DiGraph::Neighbors const& neighbors = m_digraph.neighbors(v.id);
         v.neighbors.resize(neighbors.size());
 
         size_t i = neighbors.size();
@@ -72,6 +79,7 @@ void ForceDirectedGraph::reset()
     }
 }
 
+//------------------------------------------------------------------------------
 void ForceDirectedGraph::update()
 {
     if (m_temperature < 0.1f)
@@ -80,14 +88,13 @@ void ForceDirectedGraph::update()
     step();
 }
 
+//------------------------------------------------------------------------------
 void ForceDirectedGraph::step()
 {
-    const float BORDER = 5.0f;
-
     #pragma omp parallel for default(shared) schedule(dynamic)
     for (auto& v: m_vertices)
     {
-        // Repulsive Force
+        // Repulsive forces: nodes -- nodes
         for (auto& u: m_vertices)
         {
             if (u.id == v.id)
@@ -99,13 +106,13 @@ void ForceDirectedGraph::step()
             v.displacement += direction / dist * rf;
         }
 
-        // Attractive Force
+        // Attractive forces: edges
         for (auto& u: v.neighbors)
         {
             if (u.id == v.id)
                 continue ;
 
-            const sf::Vector2f direction(v.position - *(u.position));
+            const sf::Vector2f direction(v.position - (*u.position));
             const float dist = distance(direction);
             const float af = attractive_force(dist);
             v.displacement -= direction / dist * af;
@@ -117,9 +124,13 @@ void ForceDirectedGraph::step()
     for (auto& v: m_vertices)
     {
         const float dist = distance(v.displacement);
-        v.position += (dist > m_temperature) ? v.displacement * m_temperature / dist : v.displacement;
-        v.position.x = std::min(m_width - BORDER, std::max(BORDER, v.position.x));
-        v.position.y = std::min(m_height - BORDER, std::max(BORDER, v.position.y));
+        v.position += (dist > m_temperature)
+                      ? v.displacement * m_temperature / dist
+                      : v.displacement;
+        v.position.x = std::min(m_width - LAYOUT_BORDER_X,
+                                std::max(LAYOUT_BORDER_X, v.position.x));
+        v.position.y = std::min(m_height - LAYOUT_BORDER_Y,
+                                std::max(LAYOUT_BORDER_Y, v.position.y));
         v.displacement = { 0.0f, 0.0f };
     }
 

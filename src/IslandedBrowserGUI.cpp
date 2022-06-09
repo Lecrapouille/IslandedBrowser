@@ -26,23 +26,19 @@
 // For more information, please refer to <https://unlicense.org>
 
 #include "IslandedBrowserGUI.hpp"
-#include "Circle.hpp"
+#include "Drawable.hpp"
 #include <iostream>
+#include <cstdlib>
 
 //------------------------------------------------------------------------------
 IslandedBrowserGUI::IslandedBrowserGUI(Application& application, const char* name)
     : Application::GUI(application, name, sf::Color::White),
       m_island(sf::Vector2f(renderer().getSize()))
 {
+    // Ideally make two views: one for the scene and another view for the interface.
     m_view = renderer().getDefaultView();
     m_view.setSize(float(application.width()), float(application.height()));
-
-#warning "Font"
-    //m_text.setFont(FontManager::instance().font("main font"));
-    m_text.setString("Press space to start simulation");
-    m_text.setCharacterSize(24);
-    m_text.setFillColor(sf::Color::Red);
-    m_text.setStyle(sf::Text::Bold | sf::Text::Underlined);
+    m_message_bar.font("data/font.ttf");
 }
 
 //------------------------------------------------------------------------------
@@ -68,6 +64,15 @@ void IslandedBrowserGUI::handleInput()
 {
     sf::Event event;
 
+    m_mouse = sf::Mouse::getPosition(renderer());
+
+    // Show the URL of the node pointed by the mouse cursor
+    std::string const& title = m_island.getTitle(m_mouse);
+    if (!title.empty())
+    {
+        m_message_bar.entry(title, MESSAGEBAR_COLOR);
+    }
+
     while (m_renderer.pollEvent(event))
     {
         switch (event.type)
@@ -79,6 +84,18 @@ void IslandedBrowserGUI::handleInput()
             if (event.key.code == sf::Keyboard::Escape)
             {
                 m_renderer.close();
+            }
+            break;
+        case sf::Event::MouseButtonPressed:
+            {
+                // TODO call several times Firefox because
+                std::string const& url = m_island.getURL(m_mouse);
+                if (!url.empty())
+                {
+                    std::string command = BROWSER_NAME + url;
+                    std::cout << "command: " << command << std::endl;
+                    system(command.c_str());
+                }
             }
             break;
         default:
@@ -97,18 +114,21 @@ void IslandedBrowserGUI::update(const float dt)
 //------------------------------------------------------------------------------
 void IslandedBrowserGUI::draw()
 {
-    Circle circle(0.0f, 0.0f, 5.0f, sf::Color::Blue);
-
+    // Scene view
     for (auto const& it: m_island.vertices())
     {
-        circle.position(it.position);
+        Circle circle(it.position, NODE_RADIUS, it.color);
         renderer().draw(circle);
 
-        for (auto const& nei: it.neighbors)
+        for (auto const& n: it.neighbors)
         {
-             Arrow arrow(it.position.x, it.position.y, nei.position->x, nei.position->y);
-             renderer().draw(arrow);
+            Arrow arrow(it.position.x, it.position.y,
+                        n.position->x, n.position->y);
+            renderer().draw(arrow);
         }
     }
-    renderer().draw(m_text);
+
+    // Interface view
+    m_message_bar.size(m_renderer.getSize());
+    m_renderer.draw(m_message_bar);
 }

@@ -32,51 +32,78 @@
 #  include <iostream>
 
 // *****************************************************************************
-//! \brief
+//! \brief Directed graph structure. This structure is not the faster but allows
+//! to write compact code.
 // *****************************************************************************
-class Graph
+class DiGraph
 {
 public:
 
+    //! \brief A node is simplify an unique identifier (they are given by
+    //! Firefox)
     using Node = size_t;
+    //! \brief Nodes shall be unique.
     using Nodes = std::set<Node>;
+    //! \brief Node neighbors. Here we do not care about not storing edges.
     using Neighbors = std::vector<Node>;
+    //! \brief Egdes are unique. Key: source node. Value: destination nodes.
     using Edges = std::map<Node, Neighbors>;
 
+    //----------------------------------------------------------------------
+    //! \brief Make the graph dummy.
+    //----------------------------------------------------------------------
     inline void reset()
     {
         m_edges.clear();
         m_nodes.clear();
     }
 
+    //----------------------------------------------------------------------
+    //! \brief Add a node in the graph. If node was already inserted it is
+    //! not insrted a second times.
+    //----------------------------------------------------------------------
     inline void add_node(Node const node)
     {
         m_nodes.insert(node);
         m_edges[node];
     }
 
+    //----------------------------------------------------------------------
+    //! \brief Add an edge made of its source and its destination nodes.
+    //! \param[in] from source node.
+    //! \param[in] to destination node.
+    //----------------------------------------------------------------------
     void add_edge(Node const from, Node const to)
     {
         add_node(from);
-        if (to != from) // No cycles (ugly hack to fix root node with parent refering to itself)
+        // No cycles (ugly hack to fix root node with parent which is refering
+        // to itself as given in the Firefox JSON file).
+        if (to != from)
         {
             add_node(to);
             m_edges[from].push_back(to);
-            // FIXME: The graph is not necessary bigraph but they are needed for the ForceDirectedGraph
-            m_edges[to].push_back(from);
         }
     }
 
+    //----------------------------------------------------------------------
+    //! \brief Const getter of the nodes.
+    //----------------------------------------------------------------------
     inline Nodes const& nodes() const
     {
         return m_nodes;
     }
 
+    //----------------------------------------------------------------------
+    //! \brief Const getter of the arcs.
+    //----------------------------------------------------------------------
     inline Edges const& edges() const
     {
         return m_edges;
     }
 
+    //----------------------------------------------------------------------
+    //! \brief Const getter of neigbouring nodes.
+    //----------------------------------------------------------------------
     inline Neighbors const& neighbors(Node const node) const
     {
         auto const& it = m_edges.find(node);
@@ -88,12 +115,18 @@ public:
         return it->second;
     }
 
+    //----------------------------------------------------------------------
+    //! \brief Return the number of output edges of the given node.
+    //----------------------------------------------------------------------
     inline size_t degree(Node const node) const
     {
         return neighbors(node).size();
     }
 
-    friend std::ostream& operator<<(std::ostream& os, Graph const& g)
+    //----------------------------------------------------------------------
+    //! \brief Print on the console the graph.
+    //----------------------------------------------------------------------
+    friend std::ostream& operator<<(std::ostream& os, DiGraph const& g)
     {
         for (auto const& node: g.m_nodes)
         {

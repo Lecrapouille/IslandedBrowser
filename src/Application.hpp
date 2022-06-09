@@ -34,6 +34,7 @@
 //! The adaptation is made for the usage of this particular project.
 // *****************************************************************************
 
+#  include "Settings.hpp"
 #  include <SFML/Graphics.hpp>
 #  include <SFML/System.hpp>
 #  include <stack>
@@ -42,7 +43,6 @@
 #  include <memory>
 
 // *****************************************************************************
-
 //! \brief Manage a stack of GUI instances (GUI which shall derive from the
 //! interface Application::GUI class). Since we desire to manage a very simple
 //! application, GUIs are simply pushed and poped in a stack (\c m_stack) and
@@ -51,13 +51,12 @@
 //! inactive until they reached the top position in the stack where they become
 //! active.  Therefore a GUI pushing a child GUI in the stack will be in pause
 //! until the child GUI is poped off the stack.
-
+//!
 //! Finally, note when a GUI is puash it does not have not their memory created
 //! (and when poped they do not have their memory released). Indeed, the stack
 //! holds and refers GUIs fromraw pointers. GUI are in fact created can be
 //! stored into a separate internal container (\c m_guis created through the \c
 //! create() method and get from the \c gui() method).
-
 // *****************************************************************************
 class Application
 {
@@ -84,7 +83,7 @@ public:
         //! \param[in] color: Background color.
         //----------------------------------------------------------------------
         GUI(Application& application, const char* name, sf::Color const& color
-            = sf::Color::White);
+            = LAYOUT_COLOR);
 
         //----------------------------------------------------------------------
         //! \brief Needed because of virtual methods.

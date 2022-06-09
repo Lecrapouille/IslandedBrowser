@@ -27,7 +27,7 @@
 
 int main()
 {
-    Application app(800, 600, "Islanded Browser");
+    Application app(WINDOWS_WIDTH, WINDOWS_HEIGHT, "Islanded Browser");
     IslandedBrowserGUI& gui = app.create<IslandedBrowserGUI>("IslandedBrowserGUI");
     app.loop(gui);
 

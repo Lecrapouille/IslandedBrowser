@@ -28,27 +28,63 @@
 
 #  include "Graph.hpp"
 #  include <SFML/System/Vector2.hpp>
+#  include <SFML/Graphics/Color.hpp>
 #  include <map>
 #  include <vector>
 #  include <cstdlib>
 #  include <cmath>
 
+// *****************************************************************************
+//! \brief Force-directed graph drawing algorithms are a class of algorithms for
+//! drawing graphs in an aesthetically-pleasing way. Their purpose is to
+//! position the nodes of a graph in two-dimensional or three-dimensional space
+//! so that all the edges are of more or less equal length and there are as few
+//! crossing edges as possible, by assigning forces among the set of edges and
+//! the set of nodes, based on their relative positions, and then using these
+//! forces either to simulate the motion of the edges and nodes or to minimize
+//! their energy.
+//!
+//! For more information see this video https://youtu.be/WWm-g2nLHds
+//! This code source is largely inspired by:
+//! https://github.com/qdHe/Parallelized-Force-directed-Graph-Drawing
+// *****************************************************************************
 class ForceDirectedGraph
 {
 public:
 
+    // *************************************************************************
+    //! \brief Vertex is a 2D representation of a graph node.
+    // *************************************************************************
     struct Vertex
     {
+        // *********************************************************************
+        //! \brief Contrary to a graph node we just care about position of
+        //! neighbors.
+        // *********************************************************************
         struct Neighbor
         {
+            //! \brief World coordinate position. Be a pointer to track position
             sf::Vector2f* position = nullptr;
+            //! \brief Reference to the graph node.
             size_t id;
         };
 
-        sf::Vector2f position = { float(rand()) / float(RAND_MAX),
-                                  float(rand()) / float(RAND_MAX) };
+        //! \brief World coordinate position. Position are randomized between 0
+        //! and 1. The scaling to the windows dimension is made later since we
+        //! prefer this astructure does know to the windows class.
+        sf::Vector2f position =
+        {
+            float(rand()) / float(RAND_MAX),
+            float(rand()) / float(RAND_MAX)
+        };
+
+        //! \brief Displacement due to attractive and reuplsive forces.
         sf::Vector2f displacement = { 0.0f, 0.0f };
+        //! \brief List of neighboring nodes.
         std::vector<ForceDirectedGraph::Vertex::Neighbor> neighbors;
+        //! \brief Color
+        sf::Color color;
+        //! \brief Reference to the graph node.
         size_t id;
     };
 
@@ -56,11 +92,26 @@ public:
 
 public:
 
-    ForceDirectedGraph(sf::Vector2f const dimension, Graph& graph);
+    //----------------------------------------------------------------------
+    //! \brief Default constructor. Set the dimension of the layout and set
+    //! the reference to the graph we have to display.
+    //----------------------------------------------------------------------
+    ForceDirectedGraph(sf::Vector2f const dimension, DiGraph& digraph);
+
+    //----------------------------------------------------------------------
+    //! \brief Restore initial states.
+    //----------------------------------------------------------------------
     void reset();
-    void step();
+
+    //----------------------------------------------------------------------
+    //! \brief Compute one step of forces if temperature is still hot else
+    //! do nothing.
+    //----------------------------------------------------------------------
     void update();
 
+    //----------------------------------------------------------------------
+    //! \brief Const getter of vertices.
+    //----------------------------------------------------------------------
     inline Vertices const& vertices() const
     {
         return m_vertices;
@@ -68,21 +119,41 @@ public:
 
 private:
 
+    //----------------------------------------------------------------------
+    //! \brief Do a single step for computing forces.
+    //----------------------------------------------------------------------
+    void step();
+
+    //----------------------------------------------------------------------
+    //! \brief Euclidian norm.
+    //! \param[in] p world coordinate position.
+    //----------------------------------------------------------------------
     inline float distance(sf::Vector2f const& p) const
     {
         return std::max(0.001f, sqrtf(p.x * p.x + p.y * p.y));
     }
 
-    inline float repulsive_force(float const dist) const
+    //----------------------------------------------------------------------
+    //! \brief Compute repulsive force.
+    //! \param[in] distance.
+    //----------------------------------------------------------------------
+    inline float repulsive_force(float const distance) const
     {
-        return K * K / dist / float(N);
+        return K * K / distance / float(N);
     }
 
-    inline float attractive_force(float const dist) const
+    //----------------------------------------------------------------------
+    //! \brief Compute attractive force.
+    //! \param[in] distance.
+    //----------------------------------------------------------------------
+    inline float attractive_force(float const distance) const
     {
-        return dist * dist / K / float(N);
+        return distance * distance / K / float(N);
     }
 
+    //----------------------------------------------------------------------
+    //! \brief Reduce effect of forces.
+    //----------------------------------------------------------------------
     inline float cooling()
     {
         m_temperature *= 0.95f;
@@ -91,12 +162,19 @@ private:
 
 private:
 
-    Graph& m_graph;
+    //! \brief The directional graph to display.
+    DiGraph& m_digraph;
+    //! \brief Collection of nodes to display.
     Vertices m_vertices;
+    //! \brief Dimension of the screen.
     float m_width;
+    //! \brief Dimension of the screen.
     float m_height;
+    //! \brief Reduce effect of forces.
     float m_temperature;
+    //! \brief Force coeficient.
     float K;
+    //! \brief Number of vertices.
     size_t N;
 };
 

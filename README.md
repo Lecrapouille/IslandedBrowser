@@ -29,12 +29,14 @@ Step three: Save your Firefox bookmarks as JSON file into `IslandedBrowser/bookm
 - Save to this location: `IslandedBrowser/bookmarks/bookmarks.json`.
 - See this video on how to save the bookmarks: https://youtu.be/n-aw0ZNRby0
 
-Step four: Compile the IslandedBrowser: 
+Step four: Compile the IslandedBrowser:
 - `make -j8`
 - The Makefile will do it for you: it will call the Python3 `bookmarks/bookmark.py` to generate the C++ source file in `src/bookmarks.cpp` from `bookmarks/bookmarks.json`.
 - You can run the application: `./build/IslandedBrowser`
 
-Step five: Click on an URL this will open your Firefox. Click on a node this will open all URLs.
+Step five: Click on an URL this will open your Firefox. Click on a node this will open all URLs as child.
+- Bookmarks are in blue.
+- Folders are in red.
 
 ## Algorithm
 
@@ -53,8 +55,6 @@ Under developement:
 - Thinking on how to generate heigh maps from the graph.
 - Generate 3D meshes and use OpenGL.
 - Display URL when mouse is pointing on node
-- Mouse click and open Firefox.
-- Make graph from bookmarks tags. 
 
 ## Limitation
 

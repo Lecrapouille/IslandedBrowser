@@ -50,8 +50,7 @@ struct Folder
 static inline
 std::ostream& operator<<(std::ostream& os, const Folder& folder)
 {
-    os << "Folder " << folder.title << " (parent: " << folder.parent
-    /*<< ": " << folders.find(folder.parent)->second.title*/ << ")\n";
+    os << "Folder " << folder.title << " (parent: " << folder.parent << ")\n";
     return os;
 }
 
@@ -77,8 +76,7 @@ static inline
 std::ostream& operator<<(std::ostream& os, const Bookmark& bookmark)
 {
     os << "Bookmark " << bookmark.title << ": " << bookmark.uri
-       << " (parent: " << bookmark.parent /*<< ": " << bookmarks.find(bookmark.parent)->second.title*/
-       << ")\n";
+       << " (parent: " << bookmark.parent << ")\n";
     return os;
 }
 

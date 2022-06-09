@@ -29,6 +29,7 @@
 #  define ISLANDED_BROWSER_GUI_HPP
 
 #  include "Application.hpp"
+#  include "Drawable.hpp"
 #  include "IslandedBrowser.hpp"
 #  include <atomic>
 
@@ -95,7 +96,9 @@ private:
     //! \brief View
     sf::View m_view;
     //! \brief Display messages
-    sf::Text m_text;
+    MessageBar m_message_bar;
+    //! \brief
+    sf::Vector2i m_mouse;
     //! \brief
     IslandedBrowser m_island;
     //! \brief Halting the GUI ?
