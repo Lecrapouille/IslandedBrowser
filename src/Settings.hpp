@@ -27,9 +27,9 @@
 #  define SETTINGS_HPP
 
 //! \brief Windows dimensions
-#  define WINDOWS_WIDTH  800
+#  define WINDOWS_WIDTH  1920
 //! \brief Windows dimensions
-#  define WINDOWS_HEIGHT 600
+#  define WINDOWS_HEIGHT 1080
 //! \brief Text size
 #  define CHARACTER_SIZE 20
 //! \brief MessageBar SIZE

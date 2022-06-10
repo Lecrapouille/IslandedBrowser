@@ -53,7 +53,8 @@ public:
     //----------------------------------------------------------------------
     friend std::ostream& operator<<(std::ostream& os, IslandedBrowser const& island)
     {
-        os << island.m_graph;
+        os << "Digraph:\n" << island.m_digraph;
+        os << "ForceDirect:\n" << island.m_force_directed;
         return os;
     }
 
@@ -116,8 +117,6 @@ private:
 
     //! \brief Directed graph of bookmarks.
     DiGraph m_digraph;
-    // TODO to be removed! The ForceDirectedGraph needs an undirected graph.
-    DiGraph m_graph;
     //! \brief Forces to deploy the graph edges for a nice display.
     ForceDirectedGraph m_force_directed;
     //! \brief Database for the graph (bookmarks).

@@ -42,6 +42,7 @@ void ForceDirectedGraph::reset()
     m_temperature = m_width + m_height;
     m_vertices.resize(N);
 
+    // Copy graph nodes to Graph vertices
     #pragma omp parallel for default(shared) schedule(dynamic)
     for (size_t n = 0u; n < N; ++n)
     {
@@ -63,6 +64,7 @@ void ForceDirectedGraph::reset()
         lookup[m_vertices[n].id] = n;
     }
 
+    // Add edges "source node" -> "destination node"
     #pragma omp parallel for default(shared) schedule(dynamic)
     for (size_t n = 0u; n < N; ++n)
     {
@@ -75,6 +77,23 @@ void ForceDirectedGraph::reset()
         {
            v.neighbors[i].position = &m_vertices[lookup[neighbors[i]]].position;
            v.neighbors[i].id = m_vertices[lookup[neighbors[i]]].id;
+        }
+    }
+
+    // We need undirected graph so add edges "destination node" -> "source node"
+    for (auto& vertex: m_vertices)
+    {
+        for (auto& neighbor: vertex.neighbors)
+        {
+           // Insert if not already present
+           Vertex& v = m_vertices[lookup[neighbor.id]];
+           size_t i = 0u;
+           while ((i < v.neighbors.size()) && (v.neighbors[i].id != vertex.id))
+               ++i;
+           if (i == v.neighbors.size())
+           {
+               v.neighbors.push_back({&vertex.position, vertex.id});
+           }
         }
     }
 }

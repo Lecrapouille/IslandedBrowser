@@ -58,12 +58,15 @@ public:
     struct Vertex
     {
         // *********************************************************************
-        //! \brief Contrary to a graph node we just care about position of
+        //! \brief Contrary to a graph structure we just care about position of
         //! neighbors.
         // *********************************************************************
         struct Neighbor
         {
-            //! \brief World coordinate position. Be a pointer to track position
+            Neighbor() = default;
+            Neighbor(sf::Vector2f* p, size_t i) : position(p), id(i) {}
+
+            //! \brief World coordinate position. Use a pointer to track updates
             sf::Vector2f* position = nullptr;
             //! \brief Reference to the graph node.
             size_t id;
@@ -117,6 +120,23 @@ public:
         return m_vertices;
     }
 
+    //----------------------------------------------------------------------
+    //! \brief Print on the console the graph.
+    //----------------------------------------------------------------------
+    friend std::ostream& operator<<(std::ostream& os, ForceDirectedGraph const& g)
+    {
+        for (auto const& vertex: g.m_vertices)
+        {
+            os << vertex.id << ":";
+            for (auto const& neighbor: vertex.neighbors)
+            {
+                os << " " << neighbor.id;
+            }
+            os << std::endl;
+        }
+        return os;
+    }
+
 private:
 
     //----------------------------------------------------------------------
@@ -139,7 +159,7 @@ private:
     //----------------------------------------------------------------------
     inline float repulsive_force(float const distance) const
     {
-        return K * K / distance / float(N);
+        return K * K / distance / float(N) / 2.0f;
     }
 
     //----------------------------------------------------------------------

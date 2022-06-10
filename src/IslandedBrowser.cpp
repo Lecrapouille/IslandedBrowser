@@ -38,20 +38,15 @@ IslandedBrowser::IslandedBrowser(sf::Vector2f const dimension)
 // -----------------------------------------------------------------------------
 void IslandedBrowser::createGraph()
 {
-    m_graph.reset();
     m_digraph.reset();
     for (auto const& it: m_folders)
     {
         m_digraph.add_edge(it.second.parent, it.second.id);
-        m_graph.add_edge(it.second.parent, it.second.id);
-        m_graph.add_edge(it.second.id, it.second.parent);
     }
 
     for (auto const& it: m_bookmarks)
     {
         m_digraph.add_edge(it.second.parent, it.second.id);
-        m_graph.add_edge(it.second.parent, it.second.id);
-        m_graph.add_edge(it.second.id, it.second.parent);
     }
 }
 
