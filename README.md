@@ -5,7 +5,7 @@ This is a in gestation personal experience for the [Stigmee](https://github.com/
 Notes:
 - I wrote *bookmarks* not *tabs* because I never have 500 tabs opened in my browser but have so many unorganized bookmarks.
 - I used Firefox, I do not use Chrome browser but I guess the process is identical.
-- You can see my [Youtube video](https://youtu.be/_IjCipUK8Bk)
+- You can click on the picture below, to see my Youtube tutorial [![video](doc/screenshot.png)](https://youtu.be/_IjCipUK8Bk) but with real collection of bookmarks, the graph is currently not displayed well as showned in the screenshot.
 
 ## Compilation process
 
