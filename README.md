@@ -95,3 +95,7 @@ void IslandedBrowser::init(Bookmarks& bookmarks, Folders& folders)
 }
 ```
 
+## References
+
+- Philipp Kindermann Youtube videos [Force-Directed Drawings (1/3)](https://youtu.be/WWm-g2nLHds)
+- https://github.com/qdHe/Parallelized-Force-directed-Graph-Drawing
