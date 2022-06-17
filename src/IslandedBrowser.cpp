@@ -83,8 +83,9 @@ void IslandedBrowser::getURL_chapo(DiGraph::Node const& node)
 {
     if (m_digraph.degree(node) == 0u)
     {
-        m_cache_urls += " ";
+        m_cache_urls += " \"";
         m_cache_urls += m_bookmarks[node].uri;
+        m_cache_urls += "\"";
     }
     else
     {
