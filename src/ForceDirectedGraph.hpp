@@ -44,6 +44,13 @@
 //! forces either to simulate the motion of the edges and nodes or to minimize
 //! their energy.
 //!
+//! Use the spring/repulsion model of Fruchterman and Reingold (1991) with:
+//! - Attractive force: af(d) = d^2 / k
+//! - Repulsive force: rf(d) = -k^2 / d
+//! where d is distance between two vertices and the optimal distance between
+//! vertices k is defined as C * sqrt( area / num_vertices ) where C is a
+//! parameter we can adjust.
+//!
 //! For more information see this video https://youtu.be/WWm-g2nLHds
 //! This code source is largely inspired by:
 //! https://github.com/qdHe/Parallelized-Force-directed-Graph-Drawing
@@ -176,7 +183,7 @@ private:
     //----------------------------------------------------------------------
     inline float cooling()
     {
-        m_temperature *= 0.95f;
+        m_temperature *= 0.98f;
         return m_temperature;
     }
 
@@ -192,7 +199,7 @@ private:
     float m_height;
     //! \brief Reduce effect of forces.
     float m_temperature;
-    //! \brief Force coeficient.
+    //! \brief Force coeficient: sqrt(area / num_vertices)
     float K;
     //! \brief Number of vertices.
     size_t N;
