@@ -23,13 +23,86 @@
 ********************************************************************************
 */
 
+
 #include "IslandedBrowserGUI.hpp"
+#include <csignal>
+#include <fstream>
+#include <iostream>
+#include <stdexcept>
+#include <string>
 
-int main()
+namespace {
+
+//------------------------------------------------------------------------------
+void usage(char const* program)
 {
-    Application app(WINDOWS_WIDTH, WINDOWS_HEIGHT, "Islanded Browser");
-    IslandedBrowserGUI& gui = app.create<IslandedBrowserGUI>("IslandedBrowserGUI");
-    app.loop(gui);
+    std::cout
+        << "Usage: " << program << " [bookmarks.json] [--screenshot file.png]\n"
+        << "  bookmarks.json  private/organization.json (bookmarks/organize.py)\n"
+        << "                  or a Firefox backup (bookmarks/firefox_export.py).\n"
+        << "                  Default: the first existing of private/organization.json,\n"
+        << "                  private/bookmarks.json, bookmarks/example.json.\n"
+        << "  --screenshot    save the window once the layout has converged, then quit.\n"
+        << "Keys: Space pause, R restart, F fit, L links, N names, S screenshot, Esc quit.\n"
+        << "Mouse: click opens bookmarks, wheel zooms, right drag pans.\n";
+}
 
+//------------------------------------------------------------------------------
+std::string defaultBookmarks()
+{
+    char const* const candidates[] = {
+        "private/organization.json", "private/bookmarks.json", "bookmarks/example.json"
+    };
+    for (char const* path: candidates)
+    {
+        if (std::ifstream(path).good())
+            return path;
+    }
+    throw std::runtime_error("no bookmark file given and none found in private/ or bookmarks/");
+}
+
+} // namespace
+
+//------------------------------------------------------------------------------
+int main(int argc, char* argv[])
+{
+    std::string path;
+    std::string screenshot;
+    for (int i = 1; i < argc; ++i)
+    {
+        std::string const arg(argv[i]);
+        if (arg == "-h" || arg == "--help")
+        {
+            usage(argv[0]);
+            return 0;
+        }
+        if (arg == "--screenshot" && i + 1 < argc)
+            screenshot = argv[++i];
+        else if (!arg.empty() && arg[0] != '-' && path.empty())
+            path = arg;
+        else
+        {
+            usage(argv[0]);
+            return 1;
+        }
+    }
+
+    // Browsers started by a click are not waited for: let the kernel reap them.
+    std::signal(SIGCHLD, SIG_IGN);
+
+    try
+    {
+        if (path.empty())
+            path = defaultBookmarks();
+        Application app(WINDOWS_WIDTH, WINDOWS_HEIGHT, "Islanded Browser");
+        IslandedBrowserGUI& gui = app.create<IslandedBrowserGUI>(
+            "IslandedBrowserGUI", path, screenshot);
+        app.loop(gui);
+    }
+    catch (std::exception const& error)
+    {
+        std::cerr << "IslandedBrowser: " << error.what() << std::endl;
+        return 1;
+    }
     return 0;
 }

@@ -22,8 +22,6 @@
 // OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 // ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 // OTHER DEALINGS IN THE SOFTWARE.
-//
-// For more information, please refer to <https://unlicense.org>
 
 #ifndef ISLANDED_BROWSER_GUI_HPP
 #  define ISLANDED_BROWSER_GUI_HPP
@@ -31,78 +29,87 @@
 #  include "Application.hpp"
 #  include "Drawable.hpp"
 #  include "IslandedBrowser.hpp"
-#  include <atomic>
+#  include <string>
+#  include <vector>
 
 // ****************************************************************************
-//! \brief Concrete SFML Application::GUI managing the GUI of the main menu.
+//! \brief Window showing the bookmark graph.
+//!
+//! Mouse: hover shows the title, left click opens the bookmark (or the
+//! bookmarks of a folder), wheel zooms, right button drag pans.
+//! Keys: Space pause, R restart the layout, F fit the view, L similarity
+//! links and rivers, N island names, S screenshot, Escape quit.
 // ****************************************************************************
 class IslandedBrowserGUI: public Application::GUI
 {
 public:
 
     //-------------------------------------------------------------------------
-    //! \brief Default Constructor.
-    //! \param[inout] application: the main class managing the stack of GUI.
+    //! \param[in] bookmarks_path organization.json or Firefox backup.
+    //! \param[in] screenshot when not empty, save the window to this PNG
+    //! file once the layout has converged, then quit.
     //-------------------------------------------------------------------------
-    IslandedBrowserGUI(Application& application, const char* name);
+    IslandedBrowserGUI(Application& application, const char* name,
+                       std::string const& bookmarks_path,
+                       std::string const& screenshot = std::string());
 
 private: // Derived from Application::GUI
 
-    //-------------------------------------------------------------------------
-    //! \brief Draw the world and its entities.
-    //-------------------------------------------------------------------------
     virtual void draw() override;
-
-    //-------------------------------------------------------------------------
-    //! \brief Update the simulation.
-    //-------------------------------------------------------------------------
     virtual void update(const float dt) override;
-
-    //-------------------------------------------------------------------------
-    //! \brief Manage mouse and keyboard events.
-    //-------------------------------------------------------------------------
     virtual void handleInput() override;
-
-    //-------------------------------------------------------------------------
-    //! \brief Return true if GUI is alive.
-    //-------------------------------------------------------------------------
-    virtual bool running() const override
-    {
-        return m_running;
-    }
-
-    //-------------------------------------------------------------------------
-    //! \brief Pause the simulation.
-    //-------------------------------------------------------------------------
+    virtual bool running() const override { return m_running; }
     virtual void activate() override;
-
-    //-------------------------------------------------------------------------
-    //! \brief Unpause the simulation.
-    //-------------------------------------------------------------------------
-    virtual void deactivate() override;
-
-    //-------------------------------------------------------------------------
-    //! \brief Create the simulation.
-    //-------------------------------------------------------------------------
-    virtual void create() override;
-
-    //-------------------------------------------------------------------------
-    //! \brief Release the simulation.
-    //-------------------------------------------------------------------------
-    virtual void release() override;
+    virtual void deactivate() override {}
+    virtual void create() override {}
+    virtual void release() override {}
 
 private:
 
-    //! \brief View
-    sf::View m_view;
-    //! \brief Display messages
-    MessageBar m_message_bar;
-    //! \brief
-    sf::Vector2i m_mouse;
-    //! \brief
+    void fitView();
+    void zoom(float factor, sf::Vector2i pixel);
+    void click(sf::Vector2i pixel);
+    void saveScreenshot(std::string const& path);
+    void drawEdges();
+    void drawNodes();
+    void drawNames();
+    void drawRivers();
+    void computeRivers();
+    sf::Color colorOf(ForceDirectedGraph::Vertex const& vertex) const;
+
+    //! \brief Aggregated similarity between two islands (vertex indices of
+    //! the island nodes), strength normalized in ]0, 1].
+    struct River
+    {
+        size_t a;
+        size_t b;
+        float strength;
+    };
+
+private:
+
     IslandedBrowser m_island;
-    //! \brief Halting the GUI ?
-    std::atomic<bool> m_running{true};
+    //! \brief World view (graph) and interface view (texts).
+    sf::View m_world;
+    sf::View m_interface;
+    MessageBar m_message_bar;
+    sf::Font m_font;
+    bool m_has_font = false;
+    //! \brief One color per island.
+    std::vector<sf::Color> m_palette;
+    //! \brief Strongest relations between islands.
+    std::vector<River> m_rivers;
+    //! \brief Node under the mouse.
+    size_t m_hovered = BookmarkNode::none;
+    sf::Vector2i m_drag_origin;
+    bool m_dragging = false;
+    //! \brief The view follows the layout until the user zooms or pans.
+    bool m_auto_fit = true;
+    bool m_paused = false;
+    bool m_show_links = true;
+    bool m_show_names = true;
+    std::string m_screenshot;
+    bool m_running = true;
 };
 
 #endif

@@ -1,7 +1,7 @@
 /* *****************************************************************************
 ** MIT License
 **
-** Copyright (c) 2022 Quentin Quadrat
+** Copyright (c) 2022 -- 2026 Quentin Quadrat
 **
 ** Permission is hereby granted, free of charge, to any person obtaining a copy
 ** of this software and associated documentation files (the "Software"), to deal
@@ -26,34 +26,32 @@
 #ifndef FORCEDIRECTEDGRAPH_HPP
 #  define FORCEDIRECTEDGRAPH_HPP
 
-#  include "Graph.hpp"
+#  include "Bookmarks.hpp"
+#  include <SFML/Graphics/Rect.hpp>
 #  include <SFML/System/Vector2.hpp>
-#  include <SFML/Graphics/Color.hpp>
-#  include <map>
+#  include <cstdint>
+#  include <iosfwd>
 #  include <vector>
-#  include <cmath>
-#  include <random>
 
 // *****************************************************************************
-//! \brief Force-directed graph drawing algorithms are a class of algorithms for
-//! drawing graphs in an aesthetically-pleasing way. Their purpose is to
-//! position the nodes of a graph in two-dimensional or three-dimensional space
-//! so that all the edges are of more or less equal length and there are as few
-//! crossing edges as possible, by assigning forces among the set of edges and
-//! the set of nodes, based on their relative positions, and then using these
-//! forces either to simulate the motion of the edges and nodes or to minimize
-//! their energy.
+//! \brief Force-directed layout of the bookmark tree, prepared for islands.
 //!
-//! Use the spring/repulsion model of Fruchterman and Reingold (1991), in the
-//! form used by TimedPetriNetEditor:
-//! - Attractive force: af(d) = d^2 / k (connected nodes attract)
-//! - Repulsive force: rf(d) = k^2 / d (every node repels the others)
-//! - Gravity: pulls nodes toward the center so the layout stays compact
-//! Displacements are limited by a temperature that cools down (simulated
-//! annealing). k = C * sqrt(area / num_vertices) is the ideal distance.
+//! Spring/repulsion model of Fruchterman and Reingold (1991):
+//! - repulsion between every pair of vertices: K^2 / d;
+//! - attraction along each spring: strength * d^2 / K;
+//! - a weak gravity toward the origin keeps disconnected islands together;
+//! - displacements are bounded by a temperature that cools down (simulated
+//!   annealing), so the layout converges and then stops.
 //!
-//! For more information see this video https://youtu.be/WWm-g2nLHds
-//! This code source is largely inspired by:
+//! Two kinds of springs: the tree edges (island > community > bookmark) and
+//! the similarity links computed by organize.py, weaker, which pull related
+//! communities and islands toward each other (future rivers).
+//!
+//! Each island starts in its own disc, on a sunflower spiral: islands are
+//! separated from the first step instead of emerging from random noise.
+//! Positions are in world units, independent of the window size.
+//!
+//! See https://youtu.be/WWm-g2nLHds and
 //! https://github.com/qdHe/Parallelized-Force-directed-Graph-Drawing
 // *****************************************************************************
 class ForceDirectedGraph
@@ -61,53 +59,50 @@ class ForceDirectedGraph
 public:
 
     // *************************************************************************
-    //! \brief Vertex is a 2D representation of a graph node.
+    //! \brief 2D representation of a node of the bookmark tree.
     // *************************************************************************
     struct Vertex
     {
-        // *********************************************************************
-        //! \brief Contrary to a graph structure we just care about position of
-        //! neighbors.
-        // *********************************************************************
-        struct Neighbor
-        {
-            Neighbor() = default;
-            Neighbor(sf::Vector2f* p, size_t i) : position(p), id(i) {}
-
-            //! \brief World coordinate position. Use a pointer to track updates
-            sf::Vector2f* position = nullptr;
-            //! \brief Reference to the graph node.
-            size_t id;
-        };
-
-        //! \brief World coordinate position, set by reset().
-        sf::Vector2f position = { 0.0f, 0.0f };
-
-        //! \brief Displacement due to attractive and reuplsive forces.
-        sf::Vector2f displacement = { 0.0f, 0.0f };
-        //! \brief List of neighboring nodes.
-        std::vector<ForceDirectedGraph::Vertex::Neighbor> neighbors;
-        //! \brief Color
-        sf::Color color;
-        //! \brief Reference to the graph node.
-        size_t id;
+        sf::Vector2f position;
+        sf::Vector2f displacement;
+        //! \brief Index of the node in Bookmarks::nodes.
+        size_t node;
+        //! \brief Rank of its island in Bookmarks::islands.
+        size_t island;
     };
 
-    using Vertices = std::vector<ForceDirectedGraph::Vertex>;
+    // *************************************************************************
+    //! \brief Spring between two vertices (indices in vertices()).
+    // *************************************************************************
+    struct Spring
+    {
+        size_t a;
+        size_t b;
+        float strength;
+        //! \brief True for a tree edge, false for a similarity link.
+        bool tree;
+    };
 
-    //----------------------------------------------------------------------
-    //! \brief Algorithm parameters (can be tuned).
-    //----------------------------------------------------------------------
+    // *************************************************************************
+    //! \brief Tunable parameters.
+    // *************************************************************************
     struct Parameters
     {
-        //! \brief Gravity toward the center (0 disables it).
+        //! \brief Ideal distance between two linked vertices (world units).
+        float ideal_distance = 30.0f;
+        //! \brief Factor applied to the similarity weight of a link spring.
+        float link_strength = 0.3f;
+        //! \brief Extra factor for a link between two islands: strong enough
+        //! to bring related islands closer, weak enough not to merge them.
+        float cross_island_factor = 0.03f;
+        //! \brief Pull toward the origin (0 disables it).
         float gravity = 0.1f;
         //! \brief Temperature decay per step.
-        float cooling_rate = 0.95f;
-        //! \brief Iterations computed by each update().
-        int steps_per_frame = 3;
-        //! \brief Stop once the temperature falls below this.
-        float min_temperature = 0.5f;
+        float cooling_rate = 0.985f;
+        //! \brief Steps computed by each update().
+        int steps_per_update = 2;
+        //! \brief Seed of the initial positions (the layout is reproducible).
+        uint32_t seed = 42u;
     };
 
     Parameters params;
@@ -115,114 +110,70 @@ public:
 public:
 
     //----------------------------------------------------------------------
-    //! \brief Default constructor. Set the dimension of the layout and set
-    //! the reference to the graph we have to display.
+    //! \brief Build vertices and springs from the bookmarks and place the
+    //! islands. The root is not displayed.
     //----------------------------------------------------------------------
-    ForceDirectedGraph(sf::Vector2f const dimension, DiGraph& digraph);
+    void reset(Bookmarks const& bookmarks);
 
     //----------------------------------------------------------------------
-    //! \brief Restore initial states.
+    //! \brief Restart the annealing from the initial positions.
     //----------------------------------------------------------------------
-    void reset();
+    void restart();
 
     //----------------------------------------------------------------------
-    //! \brief Compute several steps of forces while the layout is still warm.
+    //! \brief Compute params.steps_per_update steps while still warm.
     //----------------------------------------------------------------------
     void update();
+
+    //----------------------------------------------------------------------
+    //! \brief Compute steps until the layout has cooled down.
+    //! \return the number of steps done.
+    //----------------------------------------------------------------------
+    size_t run();
 
     //----------------------------------------------------------------------
     //! \brief The layout is still moving.
     //----------------------------------------------------------------------
     bool isRunning() const
     {
-        return m_temperature >= params.min_temperature;
+        return m_temperature > m_min_temperature;
     }
 
     //----------------------------------------------------------------------
-    //! \brief Const getter of vertices.
+    //! \brief Bounding box of the vertices.
     //----------------------------------------------------------------------
-    inline Vertices const& vertices() const
-    {
-        return m_vertices;
-    }
+    sf::FloatRect bounds() const;
 
     //----------------------------------------------------------------------
-    //! \brief Print on the console the graph.
+    //! \brief Index of the vertex of a bookmark node, or BookmarkNode::none.
     //----------------------------------------------------------------------
-    friend std::ostream& operator<<(std::ostream& os, ForceDirectedGraph const& g)
+    size_t vertexOf(size_t node) const
     {
-        for (auto const& vertex: g.m_vertices)
-        {
-            os << vertex.id << ":";
-            for (auto const& neighbor: vertex.neighbors)
-            {
-                os << " " << neighbor.id;
-            }
-            os << std::endl;
-        }
-        return os;
+        return (node < m_vertex_of.size()) ? m_vertex_of[node] : BookmarkNode::none;
     }
+
+    std::vector<Vertex> const& vertices() const { return m_vertices; }
+    std::vector<Spring> const& springs() const { return m_springs; }
+
+    friend std::ostream& operator<<(std::ostream& os, ForceDirectedGraph const& g);
 
 private:
 
-    //----------------------------------------------------------------------
-    //! \brief Do a single step for computing forces.
-    //----------------------------------------------------------------------
-    void step();
     void initializePositions();
-    void buildNeighbors();
-
-    //----------------------------------------------------------------------
-    //! \brief Euclidian norm.
-    //! \param[in] p world coordinate position.
-    //----------------------------------------------------------------------
-    inline float distance(sf::Vector2f const& p) const
-    {
-        return std::max(0.001f, sqrtf(p.x * p.x + p.y * p.y));
-    }
-
-    //----------------------------------------------------------------------
-    //! \brief Compute repulsive force.
-    //! \param[in] distance.
-    //----------------------------------------------------------------------
-    inline float repulsive_force(float const distance) const
-    {
-        return m_K * m_K / distance;
-    }
-
-    //----------------------------------------------------------------------
-    //! \brief Compute attractive force.
-    //! \param[in] distance.
-    //----------------------------------------------------------------------
-    inline float attractive_force(float const distance) const
-    {
-        return distance * distance / m_K;
-    }
-
-    //----------------------------------------------------------------------
-    //! \brief Reduce effect of forces.
-    //----------------------------------------------------------------------
-    inline void cooling()
-    {
-        m_temperature *= params.cooling_rate;
-    }
+    void step();
 
 private:
 
-    //! \brief The directional graph to display.
-    DiGraph& m_digraph;
-    //! \brief Collection of nodes to display.
-    Vertices m_vertices;
-    //! \brief Dimension of the screen.
-    float m_width;
-    //! \brief Dimension of the screen.
-    float m_height;
-    //! \brief Reduce effect of forces.
+    std::vector<Vertex> m_vertices;
+    std::vector<Spring> m_springs;
+    //! \brief Springs of each vertex: (other vertex, strength).
+    std::vector<std::vector<std::pair<size_t, float>>> m_adjacency;
+    //! \brief Vertex index of each bookmark node.
+    std::vector<size_t> m_vertex_of;
+    //! \brief Number of vertices of each island.
+    std::vector<size_t> m_island_sizes;
     float m_temperature = 0.0f;
-    //! \brief Ideal distance between nodes: C * sqrt(area / num_vertices).
-    float m_K = 1.0f;
-    //! \brief Random generator for the initial disk of positions.
-    std::mt19937 m_rng{42};
+    float m_min_temperature = 0.0f;
 };
 
 #endif

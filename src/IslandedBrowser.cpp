@@ -1,7 +1,7 @@
 /* *****************************************************************************
 ** MIT License
 **
-** Copyright (c) 2022 Quentin Quadrat
+** Copyright (c) 2022 -- 2026 Quentin Quadrat
 **
 ** Permission is hereby granted, free of charge, to any person obtaining a copy
 ** of this software and associated documentation files (the "Software"), to deal
@@ -24,137 +24,75 @@
 */
 
 #include "IslandedBrowser.hpp"
-#include <iostream>
+#include <spawn.h>
+#include <sys/types.h>
+
+extern char** environ;
 
 // -----------------------------------------------------------------------------
-IslandedBrowser::IslandedBrowser(sf::Vector2f const dimension)
-   : m_force_directed(dimension, m_digraph)
+IslandedBrowser::IslandedBrowser(std::string const& path)
+    : m_bookmarks(Bookmarks::load(path))
 {
-    init(m_bookmarks, m_folders);
-    createGraph();
-    m_force_directed.reset();
+    m_layout.reset(m_bookmarks);
 }
 
 // -----------------------------------------------------------------------------
-void IslandedBrowser::createGraph()
+size_t IslandedBrowser::pick(sf::Vector2f const& position, float radius) const
 {
-    m_digraph.reset();
-    for (auto const& it: m_folders)
+    size_t best = BookmarkNode::none;
+    float best_distance = radius * radius;
+    for (ForceDirectedGraph::Vertex const& v: m_layout.vertices())
     {
-        m_digraph.add_edge(it.second.parent, it.second.id);
-    }
-
-    for (auto const& it: m_bookmarks)
-    {
-        m_digraph.add_edge(it.second.parent, it.second.id);
-    }
-}
-
-// TODO: to be cleaned !!!!
-
-// -----------------------------------------------------------------------------
-std::string const& IslandedBrowser::getURL(sf::Vector2i mouse)
-{
-    m_cache_urls.clear();
-
-    for (auto const& v: m_force_directed.vertices())
-    {
-        // Squared distance
-        const float distance =
-                   (float(mouse.x) - v.position.x) *
-                   (float(mouse.x) - v.position.x) +
-                   (float(mouse.y) - v.position.y) *
-                   (float(mouse.y) - v.position.y);
-
-        if (distance < 16.0f)
+        sf::Vector2f const delta = v.position - position;
+        float const distance = delta.x * delta.x + delta.y * delta.y;
+        if (distance <= best_distance)
         {
-            getURL_chapo(v.id);
-            return m_cache_urls;
+            best_distance = distance;
+            best = v.node;
         }
     }
-
-    return m_cache_urls;
+    return best;
 }
 
 // -----------------------------------------------------------------------------
-//! \note Only working with graph which are trees and directed else you have
-//! manage infinite recursion by marking visited nodes.
-void IslandedBrowser::getURL_chapo(DiGraph::Node const& node)
+std::vector<std::string> IslandedBrowser::urls(size_t node, size_t max_count,
+                                               size_t& total) const
 {
-    if (m_digraph.degree(node) == 0u)
+    std::vector<std::string> found;
+    total = 0u;
+    if (node >= m_bookmarks.nodes.size())
+        return found;
+
+    // Breadth first: the bookmarks of the folder itself come first.
+    std::vector<size_t> queue{ node };
+    for (size_t i = 0u; i < queue.size(); ++i)
     {
-        m_cache_urls += " \"";
-        m_cache_urls += m_bookmarks[node].uri;
-        m_cache_urls += "\"";
-    }
-    else
-    {
-        for (const auto& it: m_digraph.neighbors(node))
+        BookmarkNode const& current = m_bookmarks.nodes[queue[i]];
+        if (current.isBookmark())
         {
-             getURL_chapo(it);
+            ++total;
+            if (found.size() < max_count)
+                found.push_back(current.url);
         }
+        queue.insert(queue.end(), current.children.begin(), current.children.end());
     }
+    return found;
 }
 
 // -----------------------------------------------------------------------------
-std::string const& IslandedBrowser::getTitle(sf::Vector2i mouse)
+bool IslandedBrowser::openInBrowser(std::string const& browser,
+                                    std::vector<std::string> const& urls)
 {
-    m_cache_urls.clear();
+    if (urls.empty())
+        return true;
+    std::vector<char*> argv;
+    argv.push_back(const_cast<char*>(browser.c_str()));
+    for (std::string const& url: urls)
+        argv.push_back(const_cast<char*>(url.c_str()));
+    argv.push_back(nullptr);
 
-    for (auto const& v: m_force_directed.vertices())
-    {
-        // Squared distance
-        const float distance =
-                   (float(mouse.x) - v.position.x) *
-                   (float(mouse.x) - v.position.x) +
-                   (float(mouse.y) - v.position.y) *
-                   (float(mouse.y) - v.position.y);
-
-        if (distance < 16.0f)
-        {
-            getTitle_chapo(v.id);
-            return m_cache_urls;
-        }
-    }
-
-    return m_cache_urls;
-}
-
-// -----------------------------------------------------------------------------
-void IslandedBrowser::getTitle_chapo(DiGraph::Node const& node)
-{
-    if (m_digraph.degree(node) == 0u)
-    {
-        m_cache_urls += m_bookmarks[node].title;
-    }
-    else
-    {
-        m_cache_urls += m_folders[node].title;
-    }
-}
-
-#if 0
-// -----------------------------------------------------------------------------
-std::string const& IslandedBrowser::getURL(DiGraph::Node const& node)
-{
-    if (m_digraph.degree(node) == 0u)
-    {
-        m_cache_urls = m_bookmarks[node].uri;
-    }
-    else
-    {
-        for (const auto& it: m_digraph.neighbors(node))
-        {
-             m_cache_urls += " ";
-             m_cache_urls += m_bookmarks[node].uri;
-        }
-    }
-    return m_cache_urls;
-}
-#endif
-
-// -----------------------------------------------------------------------------
-void IslandedBrowser::forceDirectedGraph()
-{
-    m_force_directed.update();
+    // The child is reaped by the SIGCHLD handler set in main().
+    pid_t pid;
+    return posix_spawnp(&pid, browser.c_str(), nullptr, nullptr,
+                        argv.data(), environ) == 0;
 }

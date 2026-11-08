@@ -60,7 +60,20 @@
 #  define FOLDER_COLOR sf::Color::Red
 //! \brief Color of bookmark nodes
 #  define BOOKMARK_COLOR sf::Color::Blue
-//! \brief The name of your favorite browser
+//! \brief The name of your favorite browser (searched in the PATH)
 #  define BROWSER_NAME "firefox"
+//! \brief Maximum number of tabs opened by a click on a folder
+#  define MAX_TABS 15
+//! \brief Radius (in pixels at zoom 1) of bookmark, community and island nodes
+#  define BOOKMARK_RADIUS 4.0f
+#  define FOLDER_RADIUS 8.0f
+#  define ISLAND_RADIUS 14.0f
+//! \brief Distance in pixels under which the mouse points a node
+#  define PICK_DISTANCE 10.0f
+//! \brief Background color (sea)
+#  define SEA_COLOR sf::Color(18, 32, 48)
+//! \brief Tree edges and similarity links
+#  define TREE_EDGE_COLOR sf::Color(200, 200, 200, 70)
+#  define RIVER_COLOR sf::Color(90, 170, 255, 60)
 
 #endif

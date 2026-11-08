@@ -1,7 +1,7 @@
 /* *****************************************************************************
 ** MIT License
 **
-** Copyright (c) 2022 Quentin Quadrat
+** Copyright (c) 2022 -- 2026 Quentin Quadrat
 **
 ** Permission is hereby granted, free of charge, to any person obtaining a copy
 ** of this software and associated documentation files (the "Software"), to deal
@@ -26,58 +26,71 @@
 #ifndef BOOKMARKS_HPP
 #  define BOOKMARKS_HPP
 
-#  include <SFML/System/Vector2.hpp>
-#  include <string>
 #  include <cstddef>
-#  include <iostream>
+#  include <string>
+#  include <vector>
 
 // *****************************************************************************
-//! \brief Structure holding Firefox bookmark folder. See this document
-//! explaining fields of the Firefox bookmark if you want to extand this
-//! structure:
-//! https://searchfox.org/mozilla-release/source/toolkit/components/places/Bookmarks.jsm
+//! \brief One node of the bookmark tree: a folder (island, community or
+//! Firefox folder) or a bookmark. Nodes are stored in a vector and refer to
+//! each other by index, so nothing dangles when the vector grows.
 // *****************************************************************************
-struct Folder
+struct BookmarkNode
 {
-    //! \brief Folder name
+    enum class Kind { Folder, Bookmark };
+
+    //! \brief Sentinel for "no node".
+    static constexpr size_t none = static_cast<size_t>(-1);
+
+    Kind kind = Kind::Folder;
+    //! \brief Folder name or bookmark title.
     std::string title;
-    //! \brief unique identifier (not the universal id)
-    size_t id;
-    //! \brief unique identifier of the parent (folder)
-    size_t parent;
+    //! \brief URL of a bookmark, empty for a folder.
+    std::string url;
+    //! \brief Index of the parent node, none for the root.
+    size_t parent = none;
+    //! \brief Indices of the children nodes.
+    std::vector<size_t> children;
+    //! \brief Index of the island this node belongs to (a direct child of the
+    //! root), none for the root itself.
+    size_t island = none;
+    //! \brief Distance to the root (root = 0, island = 1).
+    size_t depth = 0;
+
+    bool isBookmark() const { return kind == Kind::Bookmark; }
 };
 
-static inline
-std::ostream& operator<<(std::ostream& os, const Folder& folder)
-{
-    os << "Folder " << folder.title << " (parent: " << folder.parent << ")\n";
-    return os;
-}
-
 // *****************************************************************************
-//! \brief Structure holding Firefox bookmark URL. See this document
-//! explaining fields of the Firefox bookmark if you want to extand this
-//! structure:
-//! https://searchfox.org/mozilla-release/source/toolkit/components/places/Bookmarks.jsm
+//! \brief Similarity between two bookmarks, computed by organize.py. Links
+//! are not part of the tree: they are the transversal relations ("rivers")
+//! between communities and islands.
 // *****************************************************************************
-struct Bookmark
+struct BookmarkLink
 {
-    //! \brief Name of the bookmark
-    std::string title;
-    //! \brief URL
-    std::string uri;
-    //! \brief unique identifier (not the universal id)
-    size_t id;
-    //! \brief unique identifier of the parent (folder)
-    size_t parent;
+    size_t from;
+    size_t to;
+    //! \brief Cosine similarity in ]0, 1].
+    float weight;
 };
 
-static inline
-std::ostream& operator<<(std::ostream& os, const Bookmark& bookmark)
+// *****************************************************************************
+//! \brief Bookmark collection: a tree rooted at node 0 plus similarity links.
+// *****************************************************************************
+struct Bookmarks
 {
-    os << "Bookmark " << bookmark.title << ": " << bookmark.uri
-       << " (parent: " << bookmark.parent << ")\n";
-    return os;
-}
+    //! \brief nodes[0] is the root. It is never displayed.
+    std::vector<BookmarkNode> nodes;
+    //! \brief Similarity links (empty for a plain Firefox export).
+    std::vector<BookmarkLink> links;
+    //! \brief Indices of the islands (the children of the root).
+    std::vector<size_t> islands;
+    //! \brief Number of bookmark nodes.
+    size_t bookmark_count = 0;
+
+    //! \brief Load a Firefox backup (bookmarks.json) or an organization
+    //! written by bookmarks/organize.py (organization.json).
+    //! \throw std::runtime_error on unreadable or empty files.
+    static Bookmarks load(std::string const& path);
+};
 
 #endif

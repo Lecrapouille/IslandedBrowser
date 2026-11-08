@@ -17,7 +17,6 @@ TARGETS := IslandedBrowser
 IslandedBrowser.DESCRIPTION := Firefox bookmarks drawn as an island
 IslandedBrowser.SOURCES := src/*.cpp
 IslandedBrowser.INCLUDES := src
-IslandedBrowser.GENERATED_SOURCES := Bookmarks.cpp
 IslandedBrowser.CXXFLAGS := -fopenmp -Wno-switch-enum -Wno-undef \
 	-Wno-unused-parameter -Wno-old-style-cast -Wno-sign-conversion \
 	-Wno-c++20-extensions
@@ -27,14 +26,3 @@ IslandedBrowser.DATA := data
 
 M ?= .makefile
 include $(M)/MyMakefile.mk
-
-###############################################################################
-# Bookmarks
-# Firefox export when present, otherwise the sample shipped with the sources.
-#
-BOOKMARKS_JSON := $(firstword $(wildcard bookmarks/bookmarks.json) bookmarks/sample.json)
-
-$(GEN_DIR)/Bookmarks.cpp: bookmarks/parser.py $(BOOKMARKS_JSON)
-	$(call print-to,Generating,bookmarks,$@)
-	$(Q)mkdir -p $(dir $@)
-	$(Q)./bookmarks/parser.py $(BOOKMARKS_JSON) $@

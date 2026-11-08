@@ -41,6 +41,7 @@
 #  include <cassert>
 #  include <iostream>
 #  include <memory>
+#  include <utility>
 
 // *****************************************************************************
 //! \brief Manage a stack of GUI instances (GUI which shall derive from the
@@ -220,10 +221,10 @@ public:
     //! \param[in] name he GUI name used as key search or for debug purpose.
     //! \return the reference to the created GUI and stored internally.
     //----------------------------------------------------------------------
-    template<class GUI>
-    GUI& create(const char* name)
+    template<class GUI, class... Args>
+    GUI& create(const char* name, Args&&... args)
     {
-        m_guis.push_back(std::make_unique<GUI>(*this, name));
+        m_guis.push_back(std::make_unique<GUI>(*this, name, std::forward<Args>(args)...));
         return *reinterpret_cast<GUI*>(m_guis.back().get());
     }
 

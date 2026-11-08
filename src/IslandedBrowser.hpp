@@ -1,7 +1,7 @@
 /* *****************************************************************************
 ** MIT License
 **
-** Copyright (c) 2022 Quentin Quadrat
+** Copyright (c) 2022 -- 2026 Quentin Quadrat
 **
 ** Permission is hereby granted, free of charge, to any person obtaining a copy
 ** of this software and associated documentation files (the "Software"), to deal
@@ -29,102 +29,53 @@
 #  include "Bookmarks.hpp"
 #  include "ForceDirectedGraph.hpp"
 #  include <string>
+#  include <vector>
 
 // *****************************************************************************
-//! \brief Class owning the context of the application.
+//! \brief Context of the application, independent of the rendering: the
+//! bookmarks, their layout and the actions on them.
 // *****************************************************************************
 class IslandedBrowser
 {
 public:
 
-    //! \brief Collection of bookmarks, indexed by the graph node.
-    using Bookmarks = std::map<DiGraph::Node, Bookmark>;
-    //! \brief Collection of bookmark folders, indexed by the graph node.
-    using Folders = std::map<DiGraph::Node, Folder>;
+    //----------------------------------------------------------------------
+    //! \brief Load the bookmark file and compute the initial layout.
+    //! \param[in] path organization.json (bookmarks/organize.py) or a
+    //! Firefox backup (bookmarks/firefox_export.py).
+    //! \throw std::runtime_error when the file cannot be used.
+    //----------------------------------------------------------------------
+    explicit IslandedBrowser(std::string const& path);
+
+    Bookmarks const& bookmarks() const { return m_bookmarks; }
+    ForceDirectedGraph& layout() { return m_layout; }
+    ForceDirectedGraph const& layout() const { return m_layout; }
 
     //----------------------------------------------------------------------
-    //! \brief Default constructor. Set the dimension of the layout.
-    //! \param[in] dimension dimension of the layout along X and Y axes.
+    //! \brief Node whose vertex is the closest to a world position.
+    //! \param[in] radius maximum distance, in world units.
+    //! \return BookmarkNode::none if no vertex is close enough.
     //----------------------------------------------------------------------
-    IslandedBrowser(sf::Vector2f const dimension);
+    size_t pick(sf::Vector2f const& position, float radius) const;
 
     //----------------------------------------------------------------------
-    //! \brief Print on the console the graph structure.
+    //! \brief URLs opened by a click: the bookmark itself, or the bookmarks
+    //! of a folder (direct children first, then deeper), at most max_count.
+    //! \param[out] total number of bookmarks under the node.
     //----------------------------------------------------------------------
-    friend std::ostream& operator<<(std::ostream& os, IslandedBrowser const& island)
-    {
-        os << "Digraph:\n" << island.m_digraph;
-        os << "ForceDirect:\n" << island.m_force_directed;
-        return os;
-    }
+    std::vector<std::string> urls(size_t node, size_t max_count, size_t& total) const;
 
     //----------------------------------------------------------------------
-    //! \brief Const getter of the graph
+    //! \brief Start the web browser on the given URLs, without a shell (an
+    //! URL cannot inject a command). Return false on failure.
     //----------------------------------------------------------------------
-    inline DiGraph const& graph() const
-    {
-        return m_digraph;
-    }
-
-    //----------------------------------------------------------------------
-    //! \brief Const getter of the graph nodes to display.
-    //----------------------------------------------------------------------
-    inline ForceDirectedGraph::Vertices const& vertices() const
-    {
-        return m_force_directed.vertices();
-    }
-
-    //----------------------------------------------------------------------
-    //! \brief Advance the force-directed layout by a few annealed steps.
-    //----------------------------------------------------------------------
-    void forceDirectedGraph();
-
-    //----------------------------------------------------------------------
-    //! \brief Get the URL of the node under the mouse position.
-    //! \param[in] mouse mouse position along the layout dimension.
-    //! \return A dummy string if there is no node under the mouse cursor.
-    //! \return The URL if the selected node is a bookmark.
-    //! \return A string of all URLs separated by a space if the selected node
-    //! is a folder.
-    //----------------------------------------------------------------------
-    std::string const& getURL(sf::Vector2i mouse);
-
-    //----------------------------------------------------------------------
-    //! \brief Get the title of the node (bookmark or folder) under the mouse
-    //! position.
-    //! \return The title of the node.
-    //----------------------------------------------------------------------
-    std::string const& getTitle(sf::Vector2i mouse);
+    static bool openInBrowser(std::string const& browser,
+                              std::vector<std::string> const& urls);
 
 private:
 
-    void getURL_chapo(DiGraph::Node const& node);
-    void getTitle_chapo(DiGraph::Node const& node);
-
-    //----------------------------------------------------------------------
-    //! \brief C++ code generated by the script ../tool/bookmark.py from
-    //! the Firefox bookmarks exported as JSON file.
-    //----------------------------------------------------------------------
-    void init(Bookmarks& bookmarks, Folders& folders);
-
-    //----------------------------------------------------------------------
-    //! \brief Create a directed graph from the Firefox bookmarks exported
-    //! as JSON file.
-    //----------------------------------------------------------------------
-    void createGraph();
-
-private:
-
-    //! \brief Directed graph of bookmarks.
-    DiGraph m_digraph;
-    //! \brief Forces to deploy the graph edges for a nice display.
-    ForceDirectedGraph m_force_directed;
-    //! \brief Database for the graph (bookmarks).
     Bookmarks m_bookmarks;
-    //! \brief Database for the graph (bookmark folders).
-    Folders m_folders;
-    //! \brief Reserve memory for returning URL
-    std::string m_cache_urls;
+    ForceDirectedGraph m_layout;
 };
 
 #endif

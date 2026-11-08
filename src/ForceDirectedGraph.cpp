@@ -1,7 +1,7 @@
 /* *****************************************************************************
 ** MIT License
 **
-** Copyright (c) 2022 Quentin Quadrat
+** Copyright (c) 2022 -- 2026 Quentin Quadrat
 **
 ** Permission is hereby granted, free of charge, to any person obtaining a copy
 ** of this software and associated documentation files (the "Software"), to deal
@@ -24,184 +24,218 @@
 */
 
 #include "ForceDirectedGraph.hpp"
-#include "Settings.hpp"
 #include <algorithm>
-#include <unordered_map>
-#include <unordered_set>
+#include <cmath>
+#include <numeric>
+#include <ostream>
+#include <random>
 
-//------------------------------------------------------------------------------
-ForceDirectedGraph::ForceDirectedGraph(sf::Vector2f const dimension, DiGraph& digraph)
-    : m_digraph(digraph), m_width(dimension.x), m_height(dimension.y)
-{}
+namespace {
 
-//------------------------------------------------------------------------------
-void ForceDirectedGraph::reset()
+float length(sf::Vector2f const& v)
 {
-    std::vector<DiGraph::Node> nodes(m_digraph.nodes().begin(),
-                                     m_digraph.nodes().end());
-    const size_t count = nodes.size();
-    m_vertices.clear();
-    if (count == 0u)
-    {
-        m_temperature = 0.0f;
-        return;
-    }
-
-    // Ideal distance, a little tighter than the plain Fruchterman-Reingold k.
-    m_K = sqrtf(m_width * m_height / float(count)) * 0.75f;
-    m_temperature = std::min(m_width, m_height) / 2.0f;
-    m_vertices.resize(count);
-
-    for (size_t n = 0u; n < count; ++n)
-    {
-        Vertex& v = m_vertices[n];
-        v.id = nodes[n];
-        v.displacement = { 0.0f, 0.0f };
-        v.color = (m_digraph.degree(v.id) == 0u)
-                  ? BOOKMARK_COLOR
-                  : FOLDER_COLOR;
-    }
-
-    initializePositions();
-    buildNeighbors();
+    return std::sqrt(v.x * v.x + v.y * v.y);
 }
 
+} // namespace
+
+//------------------------------------------------------------------------------
+void ForceDirectedGraph::reset(Bookmarks const& bookmarks)
+{
+    m_vertices.clear();
+    m_springs.clear();
+    m_vertex_of.assign(bookmarks.nodes.size(), BookmarkNode::none);
+    m_island_sizes.assign(bookmarks.islands.size(), 0u);
+
+    std::vector<size_t> island_rank(bookmarks.nodes.size(), BookmarkNode::none);
+    for (size_t rank = 0u; rank < bookmarks.islands.size(); ++rank)
+        island_rank[bookmarks.islands[rank]] = rank;
+
+    // Every node but the root becomes a vertex.
+    for (size_t node = 1u; node < bookmarks.nodes.size(); ++node)
+    {
+        size_t const island = island_rank[bookmarks.nodes[node].island];
+        m_vertex_of[node] = m_vertices.size();
+        m_vertices.push_back({ {0.0f, 0.0f}, {0.0f, 0.0f}, node, island });
+        ++m_island_sizes[island];
+    }
+
+    // Tree edges, except those of the root: islands are only held together
+    // by gravity and by the similarity links.
+    for (size_t node = 1u; node < bookmarks.nodes.size(); ++node)
+    {
+        size_t const parent = bookmarks.nodes[node].parent;
+        if (parent != 0u && parent != BookmarkNode::none)
+            m_springs.push_back({ m_vertex_of[parent], m_vertex_of[node], 1.0f, true });
+    }
+    for (BookmarkLink const& link: bookmarks.links)
+    {
+        size_t const a = vertexOf(link.from);
+        size_t const b = vertexOf(link.to);
+        if (a == BookmarkNode::none || b == BookmarkNode::none)
+            continue;
+        float strength = params.link_strength * link.weight;
+        if (m_vertices[a].island != m_vertices[b].island)
+            strength *= params.cross_island_factor;
+        m_springs.push_back({ a, b, strength, false });
+    }
+
+    m_adjacency.assign(m_vertices.size(), {});
+    for (Spring const& spring: m_springs)
+    {
+        m_adjacency[spring.a].push_back({ spring.b, spring.strength });
+        m_adjacency[spring.b].push_back({ spring.a, spring.strength });
+    }
+    restart();
+}
+
+//------------------------------------------------------------------------------
+void ForceDirectedGraph::restart()
+{
+    float const k = params.ideal_distance;
+    m_temperature = k * 10.0f;
+    m_min_temperature = k * 0.05f;
+    initializePositions();
+}
+
+//------------------------------------------------------------------------------
+//! Islands are sorted by size and placed on a sunflower spiral (golden
+//! angle), each one in a disc whose area is proportional to its size.
 //------------------------------------------------------------------------------
 void ForceDirectedGraph::initializePositions()
 {
-    const sf::Vector2f center(m_width * 0.5f, m_height * 0.5f);
-    const float radius = std::min(m_width, m_height) * 0.3f;
-    std::uniform_real_distribution<float> distribution(-radius, radius);
+    float const k = params.ideal_distance;
+    size_t const count = m_island_sizes.size();
+    std::vector<size_t> order(count);
+    std::iota(order.begin(), order.end(), 0u);
+    std::stable_sort(order.begin(), order.end(), [this](size_t a, size_t b) {
+        return m_island_sizes[a] > m_island_sizes[b];
+    });
 
-    for (auto& v: m_vertices)
+    std::vector<float> radius(count);
+    float mean_radius = 0.0f;
+    for (size_t i = 0u; i < count; ++i)
     {
-        v.position.x = center.x + distribution(m_rng);
-        v.position.y = center.y + distribution(m_rng);
-    }
-}
-
-//------------------------------------------------------------------------------
-void ForceDirectedGraph::buildNeighbors()
-{
-    std::unordered_map<DiGraph::Node, size_t> lookup;
-    lookup.reserve(m_vertices.size());
-    for (size_t n = 0u; n < m_vertices.size(); ++n)
-    {
-        lookup[m_vertices[n].id] = n;
+        radius[i] = k * std::sqrt(float(m_island_sizes[i]) + 1.0f) * 0.6f;
+        mean_radius += radius[i] / float(count);
     }
 
-    // Undirected and deduplicated: a spring pulls both ends.
-    std::vector<std::unordered_set<DiGraph::Node>> neighbor_sets(m_vertices.size());
-    for (size_t n = 0u; n < m_vertices.size(); ++n)
+    float const golden_angle = 2.39996323f;
+    std::vector<sf::Vector2f> centers(count);
+    for (size_t rank = 0u; rank < count; ++rank)
     {
-        for (DiGraph::Node const neighbor: m_digraph.neighbors(m_vertices[n].id))
-        {
-            auto const found = lookup.find(neighbor);
-            if (found == lookup.end())
-            {
-                continue;
-            }
-            neighbor_sets[n].insert(neighbor);
-            neighbor_sets[found->second].insert(m_vertices[n].id);
-        }
+        float const distance = 2.5f * mean_radius * std::sqrt(float(rank));
+        float const angle = golden_angle * float(rank);
+        centers[order[rank]] = { distance * std::cos(angle), distance * std::sin(angle) };
     }
 
-    for (size_t n = 0u; n < m_vertices.size(); ++n)
+    std::mt19937 rng(params.seed);
+    std::uniform_real_distribution<float> unit(0.0f, 1.0f);
+    for (Vertex& v: m_vertices)
     {
-        Vertex& v = m_vertices[n];
-        v.neighbors.clear();
-        v.neighbors.reserve(neighbor_sets[n].size());
-        for (DiGraph::Node const id: neighbor_sets[n])
-        {
-            v.neighbors.push_back({ &m_vertices[lookup[id]].position, id });
-        }
+        // Uniform in the disc of the island.
+        float const r = radius[v.island] * std::sqrt(unit(rng));
+        float const a = 6.2831853f * unit(rng);
+        v.position = centers[v.island] + sf::Vector2f(r * std::cos(a), r * std::sin(a));
+        v.displacement = { 0.0f, 0.0f };
     }
 }
 
 //------------------------------------------------------------------------------
 void ForceDirectedGraph::update()
 {
-    for (int i = 0; i < params.steps_per_frame; ++i)
-    {
-        if (!isRunning())
-        {
-            return;
-        }
+    for (int i = 0; i < params.steps_per_update && isRunning(); ++i)
         step();
+}
+
+//------------------------------------------------------------------------------
+size_t ForceDirectedGraph::run()
+{
+    size_t steps = 0u;
+    while (isRunning())
+    {
+        step();
+        ++steps;
     }
+    return steps;
 }
 
 //------------------------------------------------------------------------------
 void ForceDirectedGraph::step()
 {
-    const size_t count = m_vertices.size();
-    if (count == 0u)
+    long const count = long(m_vertices.size());
+    float const k = params.ideal_distance;
+    float const k2 = k * k;
+    float const min_distance = k * 0.01f;
+
+    #pragma omp parallel for schedule(dynamic, 64)
+    for (long i = 0; i < count; ++i)
     {
-        return;
-    }
+        Vertex& v = m_vertices[size_t(i)];
+        sf::Vector2f force(0.0f, 0.0f);
 
-    const sf::Vector2f canvas_center(m_width * 0.5f, m_height * 0.5f);
-    const float norm = 1.0f / float(count);
-
-    #pragma omp parallel for schedule(dynamic)
-    for (size_t i = 0u; i < count; ++i)
-    {
-        Vertex& v = m_vertices[i];
-
-        // Repulsive forces: every node repels the others.
-        for (size_t j = 0u; j < count; ++j)
+        // Repulsion: every vertex pushes the others away.
+        for (long j = 0; j < count; ++j)
         {
             if (i == j)
-            {
                 continue;
-            }
-
-            const sf::Vector2f delta = v.position - m_vertices[j].position;
-            const float dist = distance(delta);
-            const float force = repulsive_force(dist);
-            v.displacement += delta * (force / dist * norm);
+            sf::Vector2f const delta = v.position - m_vertices[size_t(j)].position;
+            float const d2 = std::max(delta.x * delta.x + delta.y * delta.y,
+                                      min_distance * min_distance);
+            // (delta / d) * (k^2 / d) = delta * k^2 / d^2
+            force += delta * (k2 / d2);
         }
 
-        // Attractive forces: a spring along each edge.
-        for (auto const& neighbor: v.neighbors)
+        // Attraction along the springs: (delta / d) * strength * d^2 / k.
+        for (auto const& spring: m_adjacency[size_t(i)])
         {
-            const sf::Vector2f delta = v.position - (*neighbor.position);
-            const float dist = distance(delta);
-            const float force = attractive_force(dist);
-            v.displacement -= delta * (force / dist * norm);
+            sf::Vector2f const delta = v.position - m_vertices[spring.first].position;
+            float const d = std::max(length(delta), min_distance);
+            force -= delta * (spring.second * d / k);
         }
 
-        // Gravity keeps a wide bookmark tree from spreading into a flat line.
-        if (params.gravity > 0.0f)
-        {
-            const sf::Vector2f to_center = canvas_center - v.position;
-            v.displacement += to_center * params.gravity;
-        }
+        // Gravity toward the origin.
+        force -= v.position * params.gravity;
+        v.displacement = force;
     }
-
-    const float min_x = std::max(50.0f, LAYOUT_BORDER_X);
-    const float min_y = std::max(50.0f, LAYOUT_BORDER_Y);
-    const float max_x = m_width - min_x;
-    const float max_y = m_height - min_y;
 
     #pragma omp parallel for schedule(static)
-    for (size_t i = 0u; i < count; ++i)
+    for (long i = 0; i < count; ++i)
     {
-        Vertex& v = m_vertices[i];
-        const float disp_len = distance(v.displacement);
-        if (disp_len > m_temperature)
-        {
-            v.position += v.displacement * (m_temperature / disp_len);
-        }
-        else
-        {
-            v.position += v.displacement;
-        }
-
-        v.position.x = std::min(max_x, std::max(min_x, v.position.x));
-        v.position.y = std::min(max_y, std::max(min_y, v.position.y));
-        v.displacement = { 0.0f, 0.0f };
+        Vertex& v = m_vertices[size_t(i)];
+        float const d = length(v.displacement);
+        if (d > m_temperature)
+            v.displacement *= m_temperature / d;
+        v.position += v.displacement;
     }
 
-    cooling();
+    m_temperature *= params.cooling_rate;
+}
+
+//------------------------------------------------------------------------------
+sf::FloatRect ForceDirectedGraph::bounds() const
+{
+    if (m_vertices.empty())
+        return sf::FloatRect(0.0f, 0.0f, 1.0f, 1.0f);
+    sf::Vector2f low = m_vertices[0].position;
+    sf::Vector2f high = low;
+    for (Vertex const& v: m_vertices)
+    {
+        low.x = std::min(low.x, v.position.x);
+        low.y = std::min(low.y, v.position.y);
+        high.x = std::max(high.x, v.position.x);
+        high.y = std::max(high.y, v.position.y);
+    }
+    return sf::FloatRect(low, high - low);
+}
+
+//------------------------------------------------------------------------------
+std::ostream& operator<<(std::ostream& os, ForceDirectedGraph const& g)
+{
+    for (ForceDirectedGraph::Vertex const& v: g.m_vertices)
+    {
+        os << v.node << " island " << v.island << " (" << v.position.x << ", "
+           << v.position.y << ")\n";
+    }
+    return os;
 }
