@@ -46,10 +46,14 @@
 //!    in by land is filled (no lakes);
 //! 4. each land cell belongs to the community of the closest node of its
 //!    island: the communities become regions, side by side;
-//! 5. the relief grows by uplift and river erosion (Erosion.hpp). The ground
-//!    rises more inland and on the borders between regions, so each region
-//!    becomes a valley between ridges;
-//! 6. the cells that drain a large area carry a river.
+//! 5. the relief grows by uplift and river erosion (Erosion.hpp). The big
+//!    nodes become the summits: the island node the highest one, each
+//!    community node a peak, higher when it holds more bookmarks;
+//! 6. a river springs from each summit and runs down the steepest slope
+//!    (the gradient of the ground) to the sea. A river that meets another
+//!    one flows into it: it becomes its tributary. Following the thesis of
+//!    I. Aberkane (Chréage), an island is so structured by its main river
+//!    and each community by a tributary.
 //!
 //! The nodes are not moved: the land is made where the layout put them.
 //! Internally the lengths are in metres of the map (a cell is about 170 m),
@@ -60,15 +64,17 @@ class Terrain
 public:
 
     //-------------------------------------------------------------------------
-    //! \brief A piece of river, from a cell to the cell downstream.
+    //! \brief A river, from its spring (a summit) down to the sea or to the
+    //! river it flows into.
     //-------------------------------------------------------------------------
-    struct Stream
+    struct River
     {
-        //! \brief Its ends, in world units (as the layout).
-        sf::Vector2f from;
-        sf::Vector2f to;
-        //! \brief Area drained, counted in cells: the larger, the wider.
-        float cells;
+        //! \brief The centers of the cells it crosses, in world units (as the
+        //! layout), from upstream to downstream.
+        std::vector<sf::Vector2f> points;
+        //! \brief Its width at each point (world units): wider downstream,
+        //! where it carries the water of a larger area.
+        std::vector<float> widths;
     };
 
     //! \brief Side of a cell (metres): gives the scale of the relief.
@@ -114,7 +120,7 @@ public:
     bool holdsBookmark(int cell) const { return m_parts_of[std::size_t(cell)] >= 0; }
     std::uint32_t seed() const { return m_seed; }
 
-    std::vector<Stream> const& streams() const { return m_streams; }
+    std::vector<River> const& rivers() const { return m_rivers; }
 
 private:
 
@@ -130,8 +136,13 @@ private:
     void shapeIslands(IslandedBrowser const& island);
     void floodSea();
     void divideRegions(IslandedBrowser const& island);
+    //! \brief The summits: the island nodes and the community nodes.
+    void placeSummits(IslandedBrowser const& island);
     void raiseRelief();
-    void traceStreams();
+    void traceRivers();
+    //! \brief The neighbour of a cell down the steepest slope (or, at the
+    //! bottom of a hollow, the cell where its water overflows).
+    int downhill(int cell) const;
     //! \brief Compute landBounds().
     void findLand();
 
@@ -168,7 +179,23 @@ private:
     std::vector<sf::Vector2f> m_middles;
     std::vector<float> m_island_sizes;
 
-    std::vector<Stream> m_streams;
+    //-------------------------------------------------------------------------
+    //! \brief A summit of the relief, on a big node of the graph.
+    //-------------------------------------------------------------------------
+    struct Summit
+    {
+        //! \brief Its cell and its position (metres).
+        int cell;
+        sf::Vector2f at;
+        //! \brief How much it rises, and how wide its mountain is (metres).
+        float strength;
+        float radius;
+    };
+
+    //! \brief The island summits first, then the communities, the biggest
+    //! first: the main rivers are traced before their tributaries.
+    std::vector<Summit> m_summits;
+    std::vector<River> m_rivers;
 };
 
 #endif

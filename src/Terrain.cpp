@@ -46,18 +46,16 @@ float const EDGE_SEA = 1200.0f;
 int const EROSION_STEPS = 60;
 //! \brief Uplift at the heart of an island: 1 mm a year.
 float const UPLIFT = 0.001f;
-//! \brief The uplift is (1 + RIDGE) times stronger on the borders between
-//! regions: they become ridges, and the regions valleys.
-float const RIDGE = 0.8f;
+//! \brief Extra uplift at the summit of an island, and at the summit of the
+//! biggest community (a smaller community rises less).
+float const ISLAND_SUMMIT = 1.6f;
+float const COMMUNITY_SUMMIT = 1.0f;
 //! \brief Land cells are at least this high; the sea floor starts at this
 //! depth (metres).
 float const SHORE = 3.0f;
 float const SEA_FLOOR = 6.0f;
-//! \brief A cell carries a river when it drains at least this many cells,
-//! or this share of its island for a large island (else a big island would
-//! be covered with rivers).
-float const RIVER_CELLS = 14.0f;
-float const RIVER_SHARE = 0.025f;
+//! \brief A river shorter than this many cells is not drawn.
+size_t const SHORTEST_RIVER = 3u;
 
 //------------------------------------------------------------------------------
 //! \brief A round piece of land: a disc (a == b) or a strip with round ends
@@ -121,14 +119,16 @@ VoronoiGrid::Hit Terrain::cellAt(sf::Vector2f world) const
 //------------------------------------------------------------------------------
 void Terrain::build(IslandedBrowser const& island)
 {
-    m_streams.clear();
+    m_rivers.clear();
+    m_summits.clear();
     measureIslands(island.layout(), island.bookmarks().islands.size());
     placeGrid(island.layout());
     shapeIslands(island);
     floodSea();
     divideRegions(island);
+    placeSummits(island);
     raiseRelief();
-    traceStreams();
+    traceRivers();
     findLand();
     m_ready = true;
 }
@@ -434,31 +434,6 @@ void Terrain::raiseRelief()
         }
     }
 
-    // 1 on a border between two regions, fading over two cells around.
-    std::vector<float> ridge(count, 0.0f);
-    for (std::size_t c = 0u; c < count; ++c)
-    {
-        int const region = m_regions_of[c];
-        if (region < 0)
-            continue;
-        for (int n: m_grid.neighbours(int(c)))
-        {
-            int const other = m_regions_of[std::size_t(n)];
-            if (other >= 0 && other != region)
-                ridge[c] = 1.0f;
-        }
-    }
-    for (int pass = 0; pass < 2; ++pass)
-    {
-        std::vector<float> wider(ridge);
-        for (std::size_t c = 0u; c < count; ++c)
-        {
-            for (int n: m_grid.neighbours(int(c)))
-                wider[c] = std::max(wider[c], 0.5f * ridge[std::size_t(n)]);
-        }
-        ridge.swap(wider);
-    }
-
     std::vector<float> ground(count, 0.0f);
     std::vector<float> uplift(count, 0.0f);
     for (std::size_t c = 0u; c < count; ++c)
@@ -471,7 +446,16 @@ void Terrain::raiseRelief()
         std::size_t const isle = std::size_t(std::max(0, m_islands_of[c]));
         float const heart = smoothstep(0.0f, std::max(2.0f, 0.7f * float(deepest[isle])),
                                        float(inland[c]));
-        uplift[c] = UPLIFT * massif * (0.25f + 0.75f * heart) * (1.0f + RIDGE * ridge[c]);
+        // The mountains of the summits: a bell curve around each one.
+        float mountains = 0.0f;
+        for (Summit const& summit: m_summits)
+        {
+            sf::Vector2f const d = p - summit.at;
+            float const d2 = (d.x * d.x + d.y * d.y) / (summit.radius * summit.radius);
+            if (d2 < 9.0f)
+                mountains = std::max(mountains, summit.strength * std::exp(-d2));
+        }
+        uplift[c] = UPLIFT * (0.4f * massif * (0.25f + 0.75f * heart) + mountains);
         ground[c] = 4.0f * noise::value(p.x / 400.0f, p.y / 400.0f, m_seed + 71u);
     }
     m_drainage = erode(m_grid, ground, uplift, m_outlet, EROSION_STEPS);
@@ -494,29 +478,119 @@ void Terrain::raiseRelief()
 }
 
 //------------------------------------------------------------------------------
-//! A river runs through every land cell that drains enough water, down to
-//! the cell its water goes to.
+//! The island node is the summit of its island, as wide as half the island.
+//! Each community node is a smaller summit, higher when the community holds
+//! more bookmarks than the others of its island.
 //------------------------------------------------------------------------------
-void Terrain::traceStreams()
+void Terrain::placeSummits(IslandedBrowser const& island)
 {
-    std::vector<float> land(m_island_sizes.size(), 0.0f);
-    for (std::size_t c = 0u; c < m_grid.count(); ++c)
+    Bookmarks const& bookmarks = island.bookmarks();
+    ForceDirectedGraph const& layout = island.layout();
+    std::vector<size_t> biggest(bookmarks.islands.size(), 1u);
+    for (ForceDirectedGraph::Vertex const& v: layout.vertices())
     {
-        if (m_islands_of[c] >= 0)
-            land[std::size_t(m_islands_of[c])] += 1.0f;
+        BookmarkNode const& node = bookmarks.nodes[v.node];
+        if (!node.isBookmark() && node.depth == 2u)
+            biggest[v.island] = std::max(biggest[v.island], island.bookmarkCount(v.node));
     }
-    float const cell_area = CELL * CELL;
-    for (std::size_t c = 0u; c < m_grid.count(); ++c)
+
+    std::vector<Summit> communities;
+    for (ForceDirectedGraph::Vertex const& v: layout.vertices())
     {
-        int const receiver = m_drainage.receivers[c];
-        float const cells = m_drainage.areas[c] / cell_area;
-        if (m_outlet[c] != 0 || receiver < 0 || m_islands_of[c] < 0)
+        BookmarkNode const& node = bookmarks.nodes[v.node];
+        sf::Vector2f const at = toLocal(v.position);
+        int const cell = m_grid.hit(at).cell;
+        if (m_outlet[std::size_t(cell)] != 0 || node.isBookmark() || node.depth > 2u)
             continue;
-        float const needed = std::max(RIVER_CELLS, RIVER_SHARE * land[std::size_t(m_islands_of[c])]);
-        if (cells < needed)
+        if (node.depth <= 1u)
+        {
+            m_summits.push_back({ cell, at, ISLAND_SUMMIT, 0.55f * m_island_sizes[v.island] });
+        }
+        else
+        {
+            float const share = float(island.bookmarkCount(v.node)) / float(biggest[v.island]);
+            communities.push_back({ cell, at, COMMUNITY_SUMMIT * (0.5f + 0.5f * std::sqrt(share)),
+                                    2.2f * m_spacing });
+        }
+    }
+    std::stable_sort(communities.begin(), communities.end(), [](Summit const& a, Summit const& b) {
+        return a.strength > b.strength;
+    });
+    m_summits.insert(m_summits.end(), communities.begin(), communities.end());
+}
+
+//------------------------------------------------------------------------------
+//! Among the neighbours lower than the cell, the one reached by the steepest
+//! slope (height lost per metre). A cell lower than all its neighbours is
+//! the bottom of a hollow: its water overflows where the priority flood
+//! found the lowest pass (Erosion.hpp).
+//------------------------------------------------------------------------------
+int Terrain::downhill(int cell) const
+{
+    int best = -1;
+    float steepest = 0.0f;
+    float const here = m_elevations[std::size_t(cell)];
+    for (int n: m_grid.neighbours(cell))
+    {
+        sf::Vector2f const d = m_grid.site(n) - m_grid.site(cell);
+        float const slope = (here - m_elevations[std::size_t(n)]) /
+                            std::sqrt(d.x * d.x + d.y * d.y);
+        if (slope > steepest)
+        {
+            steepest = slope;
+            best = n;
+        }
+    }
+    return (best >= 0) ? best : m_drainage.receivers[std::size_t(cell)];
+}
+
+//------------------------------------------------------------------------------
+//! Like a drop of water, each river leaves its summit and always goes to the
+//! lower neighbour down the steepest slope, until it reaches the sea or a
+//! river already traced, which it joins. The main rivers (from the island
+//! summits) are traced first, so the community rivers become their
+//! tributaries. A river is wider where it drains a larger area.
+//------------------------------------------------------------------------------
+void Terrain::traceRivers()
+{
+    std::size_t const count = m_grid.count();
+    float const cell_world = CELL / m_scale;
+    std::vector<char> wet(count, 0);
+    for (Summit const& summit: m_summits)
+    {
+        if (wet[std::size_t(summit.cell)] != 0)
             continue;
-        m_streams.push_back({ toWorld(m_grid.site(int(c))),
-                              toWorld(m_grid.site(receiver)), cells });
+        std::vector<int> path;
+        std::vector<char> seen(count, 0);
+        int c = summit.cell;
+        while (c >= 0 && seen[std::size_t(c)] == 0)
+        {
+            seen[std::size_t(c)] = 1;
+            path.push_back(c);
+            // The mouth: the sea, or the river it flows into.
+            if (m_outlet[std::size_t(c)] != 0 || (wet[std::size_t(c)] != 0 && path.size() > 1u))
+                break;
+            c = downhill(c);
+        }
+        if (path.size() < SHORTEST_RIVER)
+            continue;
+
+        River river;
+        for (std::size_t k = 0u; k < path.size(); ++k)
+        {
+            std::size_t const cell = std::size_t(path[k]);
+            if (k + 1u < path.size())
+                wet[cell] = 1;
+            float const cells = m_drainage.areas[cell] / (CELL * CELL);
+            river.points.push_back(toWorld(m_grid.site(int(cell))));
+            float const width = cell_world * std::min(0.6f, 0.12f + 0.045f * std::sqrt(cells));
+            // A river never gets narrower downstream.
+            river.widths.push_back(river.widths.empty() ? width : std::max(width, river.widths.back()));
+        }
+        // The spring is the node itself, not the center of its cell: the
+        // river visibly leaves the node.
+        river.points.front() = toWorld(summit.at);
+        m_rivers.push_back(std::move(river));
     }
 }
 

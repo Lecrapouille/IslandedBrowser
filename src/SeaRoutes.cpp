@@ -23,12 +23,12 @@
 ********************************************************************************
 */
 
-#include "Rivers.hpp"
+#include "SeaRoutes.hpp"
 #include <algorithm>
 #include <map>
 
 //------------------------------------------------------------------------------
-Rivers::Rivers(IslandedBrowser const& island)
+SeaRoutes::SeaRoutes(IslandedBrowser const& island)
 {
     Bookmarks const& bookmarks = island.bookmarks();
     ForceDirectedGraph const& layout = island.layout();
@@ -52,18 +52,18 @@ Rivers::Rivers(IslandedBrowser const& island)
         size_t const a = layout.vertexOf(it.first.first);
         size_t const b = layout.vertexOf(it.first.second);
         if (a != BookmarkNode::none && b != BookmarkNode::none)
-            m_rivers.push_back({ a, b, it.second });
+            m_routes.push_back({ a, b, it.second });
     }
 
     // Keep the strongest ones, then scale them so the strongest is 1.
-    std::sort(m_rivers.begin(), m_rivers.end(), [](River const& x, River const& y) {
+    std::sort(m_routes.begin(), m_routes.end(), [](Route const& x, Route const& y) {
         return x.strength > y.strength;
     });
-    m_rivers.resize(std::min(m_rivers.size(), 2u * bookmarks.islands.size()));
-    if (!m_rivers.empty())
+    m_routes.resize(std::min(m_routes.size(), 2u * bookmarks.islands.size()));
+    if (!m_routes.empty())
     {
-        float const strongest = m_rivers.front().strength;
-        for (River& river: m_rivers)
-            river.strength /= strongest;
+        float const strongest = m_routes.front().strength;
+        for (Route& route: m_routes)
+            route.strength /= strongest;
     }
 }

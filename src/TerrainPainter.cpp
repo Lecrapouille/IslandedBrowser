@@ -235,19 +235,50 @@ void TerrainPainter::update()
 }
 
 //------------------------------------------------------------------------------
-//! A river is wider downstream, where it carries the water of more cells
-//! (as the square root of the area). A disc at each joint hides the gaps
-//! between two pieces of different directions.
+//! The centers of the cells make a zigzag. A Catmull-Rom spline rounds it
+//! into a smooth curve that still passes through every center: a river
+//! keeps touching its spring (the node) and its mouth, which is a point of
+//! the river it flows into, so a tributary really joins its river. A disc
+//! at each joint hides the gaps between two pieces of different directions.
 //------------------------------------------------------------------------------
 void TerrainPainter::traceRivers()
 {
+    int const steps = 6; // pieces between two centers
     m_rivers.clear();
-    float const cell = Terrain::CELL / m_terrain.metresPerUnit(); // world units
-    for (Terrain::Stream const& s: m_terrain.streams())
+    for (Terrain::River const& river: m_terrain.rivers())
     {
-        float const width = std::min(0.55f * cell, cell * (0.06f + 0.035f * std::sqrt(s.cells)));
-        mesh::band(m_rivers, s.from, s.to, width, RIVER);
-        mesh::disc(m_rivers, s.to, width / 2.0f, RIVER);
+        std::vector<sf::Vector2f> const& p = river.points;
+        std::vector<float> const& w = river.widths;
+        std::size_t const n = p.size();
+        std::vector<sf::Vector2f> points{ p.front() };
+        std::vector<float> widths{ w.front() };
+        for (std::size_t k = 0u; k + 1u < n; ++k)
+        {
+            // The curve from p[k] to p[k + 1] bends toward the points before
+            // and after (the ends are repeated at the extremities).
+            sf::Vector2f const p0 = p[k > 0u ? k - 1u : k];
+            sf::Vector2f const p1 = p[k];
+            sf::Vector2f const p2 = p[k + 1u];
+            sf::Vector2f const p3 = p[k + 2u < n ? k + 2u : k + 1u];
+            for (int i = 1; i <= steps; ++i)
+            {
+                float const t = float(i) / float(steps);
+                float const t2 = t * t;
+                float const t3 = t2 * t;
+                points.push_back(0.5f * (2.0f * p1 + (p2 - p0) * t +
+                                         (2.0f * p0 - 5.0f * p1 + 4.0f * p2 - p3) * t2 +
+                                         (3.0f * p1 - p0 - 3.0f * p2 + p3) * t3));
+                widths.push_back(w[k] + (w[k + 1u] - w[k]) * t);
+            }
+        }
+        for (std::size_t k = 0u; k + 1u < points.size(); ++k)
+        {
+            float const width = 0.5f * (widths[k] + widths[k + 1u]);
+            mesh::band(m_rivers, points[k], points[k + 1u], width, RIVER);
+            mesh::disc(m_rivers, points[k + 1u], width / 2.0f, RIVER);
+        }
+        // A round spring on the node.
+        mesh::disc(m_rivers, points.front(), widths.front() / 2.0f, RIVER);
     }
 }
 

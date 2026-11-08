@@ -42,7 +42,7 @@ namespace mesh {
 void line(sf::VertexArray& lines, sf::Vector2f a, sf::Vector2f b, sf::Color color);
 
 //! \brief Add a band from a to b, as wide as asked (two triangles forming
-//! a long thin rectangle). Used for the rivers.
+//! a long thin rectangle). Used for the sea routes and the rivers.
 void band(sf::VertexArray& triangles, sf::Vector2f a, sf::Vector2f b,
           float width, sf::Color color);
 

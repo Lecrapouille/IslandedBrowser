@@ -45,7 +45,7 @@
 //!
 //! Two kinds of springs: the tree edges (island > community > bookmark) and
 //! the similarity links computed by organize.py, weaker, which pull related
-//! communities and islands toward each other (future rivers).
+//! communities and islands toward each other (sea routes).
 //!
 //! Each island starts in its own disc, on a sunflower spiral: islands are
 //! separated from the first step instead of emerging from random noise.

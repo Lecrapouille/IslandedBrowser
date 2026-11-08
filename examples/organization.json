@@ -1,8 +1,8 @@
 {
  "format": "islanded-browser-organization",
  "version": 2,
- "generated": "2026-11-08T19:18:32+00:00",
- "source": "bookmarks/example.json",
+ "generated": "2026-11-08T23:17:33+00:00",
+ "source": "examples/bookmarks.json",
  "parameters": {
   "neighbors": 10,
   "min_similarity": 0.12,
@@ -59,9 +59,9 @@
     "robot",
     "robotic",
     "control",
+    "Simulation",
     "mobile",
-    "arms",
-    "Simulation"
+    "arms"
    ],
    "confidence": 0.291,
    "neighbors": [
@@ -90,7 +90,7 @@
     "Modern",
     "standard",
     "build",
-    "program",
+    "debugging",
     "Compiling"
    ],
    "confidence": 0.388,
@@ -136,8 +136,8 @@
   },
   {
    "id": "i5",
-   "name": "learning · algorithm · analysi",
-   "auto_name": "learning · algorithm · analysi",
+   "name": "learning · algorithm · data",
+   "auto_name": "learning · algorithm · data",
    "parent": null,
    "children": [
     "c16",
@@ -148,8 +148,8 @@
    "keywords": [
     "learning",
     "algorithm",
-    "analysi",
     "data",
+    "analysi",
     "similarity",
     "embedding"
    ],
@@ -304,8 +304,8 @@
   },
   {
    "id": "i11",
-   "name": "travel · Hiking · trekking",
-   "auto_name": "travel · Hiking · trekking",
+   "name": "travel · Hiking · tips",
+   "auto_name": "travel · Hiking · tips",
    "parent": null,
    "children": [
     "c29"
@@ -314,9 +314,9 @@
    "keywords": [
     "travel",
     "Hiking",
-    "trekking",
-    "trail",
     "tips",
+    "trail",
+    "trekking",
     "Wikivoyage"
    ],
    "confidence": 0.547,
@@ -347,8 +347,8 @@
   },
   {
    "id": "c1",
-   "name": "shader · LearnOpenGL · Real",
-   "auto_name": "shader · LearnOpenGL · Real",
+   "name": "shader · LearnOpenGL · computer",
+   "auto_name": "shader · LearnOpenGL · computer",
    "parent": "i1",
    "children": [],
    "bookmarks": [
@@ -360,8 +360,8 @@
    "keywords": [
     "shader",
     "LearnOpenGL",
-    "Real",
     "computer",
+    "Real",
     "time",
     "started"
    ],
@@ -428,9 +428,9 @@
     "generation",
     "Voronoi",
     "diagram",
-    "terrain",
     "maps",
-    "Procedural"
+    "Procedural",
+    "terrain"
    ],
    "confidence": 0.559,
    "neighbors": [
@@ -489,8 +489,8 @@
     104
    ],
    "keywords": [
-    "js",
     "three",
+    "js",
     "manual",
     "engine",
     "graphic",
@@ -565,8 +565,8 @@
     "robot",
     "tool",
     "beginner",
-    "mobile",
-    "arms"
+    "Simulation",
+    "mobile"
    ],
    "confidence": 0.52,
    "neighbors": [
@@ -584,8 +584,8 @@
   },
   {
    "id": "c8",
-   "name": "simulator · robot · mobile",
-   "auto_name": "simulator · robot · mobile",
+   "name": "simulator · robot · Simulation",
+   "auto_name": "simulator · robot · Simulation",
    "parent": "i2",
    "children": [],
    "bookmarks": [
@@ -596,9 +596,9 @@
    "keywords": [
     "simulator",
     "robot",
+    "Simulation",
     "mobile",
     "arms",
-    "Simulation",
     "control"
    ],
    "confidence": 0.52,
@@ -681,8 +681,8 @@
   },
   {
    "id": "c11",
-   "name": "Cppreference · program",
-   "auto_name": "Cppreference · program",
+   "name": "Cppreference · debugging",
+   "auto_name": "Cppreference · debugging",
    "parent": "i3",
    "children": [],
    "bookmarks": [
@@ -693,9 +693,9 @@
     87
    ],
    "keywords": [
-    "program",
-    "Compiling",
     "debugging",
+    "Compiling",
+    "program",
     "cppreference",
     "std",
     "c++"
@@ -718,8 +718,8 @@
   },
   {
    "id": "c12",
-   "name": "build · test · debug",
-   "auto_name": "build · test · debug",
+   "name": "build · test · code",
+   "auto_name": "build · test · code",
    "parent": "i3",
    "children": [],
    "bookmarks": [
@@ -731,8 +731,8 @@
    "keywords": [
     "build",
     "test",
-    "debug",
     "code",
+    "debug",
     "developer",
     "tool"
    ],
@@ -791,8 +791,8 @@
   },
   {
    "id": "c14",
-   "name": "event · Discrete · theory",
-   "auto_name": "event · Discrete · theory",
+   "name": "theory · event · system",
+   "auto_name": "theory · event · system",
    "parent": "i4",
    "children": [],
    "bookmarks": [
@@ -801,10 +801,10 @@
     71
    ],
    "keywords": [
-    "event",
-    "Discrete",
     "theory",
+    "event",
     "system",
+    "Discrete",
     "Forth",
     "interpreter"
    ],
@@ -824,8 +824,8 @@
   },
   {
    "id": "c15",
-   "name": "automata · Formal · nets",
-   "auto_name": "automata · Formal · nets",
+   "name": "Formal · nets · automata",
+   "auto_name": "Formal · nets · automata",
    "parent": "i4",
    "children": [],
    "bookmarks": [
@@ -834,9 +834,9 @@
     112
    ],
    "keywords": [
-    "automata",
     "Formal",
     "nets",
+    "automata",
     "state",
     "Petri",
     "model"
@@ -857,8 +857,8 @@
   },
   {
    "id": "c16",
-   "name": "embedding · Neural · network",
-   "auto_name": "embedding · Neural · network",
+   "name": "embedding · network · Neural",
+   "auto_name": "embedding · network · Neural",
    "parent": "i5",
    "children": [],
    "bookmarks": [
@@ -869,8 +869,8 @@
    ],
    "keywords": [
     "embedding",
-    "Neural",
     "network",
+    "Neural",
     "transformer",
     "algorithm",
     "learning"
@@ -906,8 +906,8 @@
     "Text",
     "learning",
     "machine",
-    "analysi",
     "data",
+    "analysi",
     "similarity"
    ],
    "confidence": 0.475,
@@ -927,8 +927,8 @@
   },
   {
    "id": "c18",
-   "name": "Louvain · community · detection",
-   "auto_name": "Louvain · community · detection",
+   "name": "community · Louvain · detection",
+   "auto_name": "community · Louvain · detection",
    "parent": "i5",
    "children": [],
    "bookmarks": [
@@ -937,12 +937,12 @@
     62
    ],
    "keywords": [
-    "Louvain",
     "community",
+    "Louvain",
     "detection",
     "algorithm",
     "Clustering",
-    "analysi"
+    "data"
    ],
    "confidence": 0.46,
    "neighbors": [
@@ -1178,7 +1178,7 @@
     "maison",
     "traditionnelle",
     "Marmiton",
-    "rapide"
+    "facile"
    ],
    "confidence": 0.365,
    "neighbors": [
@@ -1261,8 +1261,8 @@
   },
   {
    "id": "c28",
-   "name": "Aquascaping · growing · compost",
-   "auto_name": "Aquascaping · growing · compost",
+   "name": "Aquascaping · compost · growing",
+   "auto_name": "Aquascaping · compost · growing",
    "parent": "i10",
    "children": [],
    "bookmarks": [
@@ -1272,8 +1272,8 @@
    ],
    "keywords": [
     "Aquascaping",
-    "growing",
     "compost",
+    "growing",
     "aquarium",
     "planted",
     "plant"
@@ -1291,8 +1291,8 @@
   },
   {
    "id": "c29",
-   "name": "travel · Hiking · trekking",
-   "auto_name": "travel · Hiking · trekking",
+   "name": "travel · Hiking · tips",
+   "auto_name": "travel · Hiking · tips",
    "parent": "i11",
    "children": [],
    "bookmarks": [
@@ -1307,9 +1307,9 @@
    "keywords": [
     "travel",
     "Hiking",
-    "trekking",
-    "trail",
     "tips",
+    "trail",
+    "trekking",
     "Wikivoyage"
    ],
    "confidence": 0.547,

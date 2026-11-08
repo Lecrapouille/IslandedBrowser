@@ -4,13 +4,13 @@
 ###
 ### Two files are written, choose one:
 ###
-### private/organized.html  (safe, additive)
+### DIR/organized.html  (safe, additive; DIR is private/ or the folder of -d)
 ###   Firefox > Library (Ctrl+Shift+O) > Import and Backup >
 ###   Import Bookmarks from HTML... Everything lands in ONE new folder
 ###   "IslandedBrowser <date>" next to your existing bookmarks. Delete the old
 ###   folders by hand once you are happy.
 ###
-### private/organized.json  (replaces everything)
+### DIR/organized.json  (replaces everything)
 ###   Firefox > Library > Import and Backup > Restore > Choose File...
 ###   Firefox ERASES all current bookmarks (menu, toolbar, others) and loads
 ###   this file. Make a backup first (Import and Backup > Backup...). The
@@ -38,16 +38,21 @@ GUID_ALPHABET = set("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456
 ###############################################################################
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 4: write organization.json as Firefox bookmark files.")
-    parser.add_argument("-i", "--input", type=Path, default=bookmarklib.PRIVATE_DIR / "organization.json",
-                        help="organization (default: private/organization.json)")
-    parser.add_argument("--json", type=Path, default=bookmarklib.PRIVATE_DIR / "organized.json",
-                        help="Firefox backup to restore (replaces all bookmarks)")
-    parser.add_argument("--html", type=Path, default=bookmarklib.PRIVATE_DIR / "organized.html",
-                        help="Netscape HTML file to import (adds one folder)")
+        description="Step 4: turn DIR/organization.json into files Firefox can load.")
+    bookmarklib.add_dir_argument(parser)
+    parser.add_argument("-i", "--input", type=Path, default=None,
+                        help="organization (default: DIR/organization.json)")
+    parser.add_argument("--json", type=Path, default=None,
+                        help="Firefox backup to restore, replaces all bookmarks "
+                             "(default: DIR/organized.json)")
+    parser.add_argument("--html", type=Path, default=None,
+                        help="HTML file to import, adds one folder (default: DIR/organized.html)")
     parser.add_argument("--keywords", type=int, default=0,
                         help="also tag each bookmark with its N first keywords")
     args = parser.parse_args()
+    args.input = bookmarklib.file_in(args.input, args.dir, "organization.json")
+    args.json = bookmarklib.file_in(args.json, args.dir, "organized.json")
+    args.html = bookmarklib.file_in(args.html, args.dir, "organized.html")
 
     organization = load(args.input)
     folders = build_folders(organization, args.keywords)
@@ -69,7 +74,7 @@ def main():
 ###############################################################################
 def load(path):
     if not path.is_file():
-        sys.exit(f"{path} is missing. Run bookmarks/organize.py first.")
+        sys.exit(f"{path} is missing. Run scripts/organize.py first.")
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as error:
@@ -188,7 +193,7 @@ def netscape_html(folders):
     now = int(time.time())
     lines = [
         "<!DOCTYPE NETSCAPE-Bookmark-file-1>",
-        "<!-- Written by IslandedBrowser bookmarks/firefox_import.py -->",
+        "<!-- Written by IslandedBrowser scripts/firefox_import.py -->",
         '<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=UTF-8">',
         "<TITLE>Bookmarks</TITLE>",
         "<H1>Bookmarks</H1>",

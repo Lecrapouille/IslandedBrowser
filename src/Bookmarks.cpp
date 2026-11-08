@@ -229,7 +229,7 @@ Bookmarks Bookmarks::load(std::string const& path)
         loadOrganization(document, b);
     else if (document.get("communities") != nullptr)
         throw std::runtime_error(path + ": organization written by an older script, "
-                                 "run bookmarks/organize.py again");
+                                 "run scripts/organize.py again");
     else
         loadFirefox(document, b);
     if (b.bookmark_count == 0u)

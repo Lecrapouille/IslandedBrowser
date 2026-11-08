@@ -1,110 +1,144 @@
 # 🏝️ Islanded Browser
 
-[Islanded Browser](https://github.com/Lecrapouille/IslandedBrowser) was a personal prototype for the [Stigmee](https://github.com/stigmee) for displaying your browser (Firefox) bookmarks as an 3D island.
+[Islanded Browser](https://github.com/Lecrapouille/IslandedBrowser) turns your browser bookmarks (Firefox) into a 2D map of islands: one island per subject, regions per sub-subject, and sea routes between related islands. It started as a prototype for [Stigmee](https://github.com/stigmee), a 3D browser project, now discontinued. Here is a screenshot:
 
 ![islanded_browser](doc/islanded_browser.png)
 
-Note: Since Stigmee is discontinued, you can find a 3D example for testing my 3D renderer [Compages](https://github.com/Lecrapouille/Compages) based on this repo. The current repo is based on exporting bookmarks and making the layout.
+The idea comes from [Chréage](https://chreage.befuse.com/content/WEBGL/ChreageAlpha0-3/index.html), the "mindscape" of Idriss J. Aberkane's PhD thesis, [Mind Ergonomy for the Knowledge Economy](https://chreage.befuse.com/content/WEBGL/ChreageAlpha0-3/index.html) (2016, chapter 11). Mind ergonomy is about shaping knowledge to fit the way our brain works, instead of forcing the brain to fit lists, folders and menus. Our memory is far better at places than at lists: we easily remember where things are in a town or a landscape, which is the trick of the "method of loci" (the memory palace). So Chréage draws knowledge as an archipelago to explore: a theme is an island, a topic is a region of it, and contents are laid out "as loci along a strand", as places along rivers. The islands follow Amit Patel's polygonal map generation, as the thesis does. A WebGL proof of concept was made by Gabriel Uribe (first with Unity), then taken up by Stigmee. Both projects are discontinued.
+
+This project applies the idea to a real pile of knowledge: browser bookmarks. Many people (me first) keep hundreds of bookmarks saved without any folder. Islanded Browser sorts them automatically into islands > regions > bookmarks, draws the archipelago, and can write the result back into Firefox.
+
+- This project has only been tested with Firefox bookmarks (Chrome should work the same way, but it is not done).
+- Since Stigmee is a dead project, the 3D version lives in my renderer [Compages](https://github.com/Lecrapouille/Compages) (demo `10e_Archipelago`), fed by this project but used for testing my 3d renderer. Here is a screenshot:
+
 ![Compages](doc/3d.png)
 
-Notes:
+## 📸 What it looks like
 
-- I wrote *bookmarks* not *tabs* because it seems that I'm the only guy that never have 500 tabs opened in my browser.
-- At contrary I have so many unorganized bookmarks (no folders). Currently the algorithm for organizing does coarse work to make hierarchy island > regions > Voronoï cells. The main goal of this project was to create island from bookmarks.
-- I used Firefox, I do not use Chrome browser but I guess the process is identical.
-- A [Youtube tutorial](https://youtu.be/_IjCipUK8Bk) shows an older version of the project.
+The same 118 public bookmarks of [examples/bookmarks.json](examples/bookmarks.json), drawn three ways:
 
-## 📸 Screenshots
-
-There is one program, `IslandedBrowser`, and what it draws depends on the JSON file it is given:
-
-- a **Firefox bookmark file** (`private/bookmarks.json` written by step 1, or `bookmarks/example.json`) is drawn with its original Firefox folders (left): here, a few catch-all folders;
-- an **organization file** (`private/organization.json` written by step 2, `organize.py`) is drawn as islands (middle): one island per subject, communities inside each island, and blue rivers between related islands;
-- with `--terrain` (or the `T` key), real land is grown under the graph (right): coasts, relief shaped by erosion, one region of Voronoi cells per community, and rivers.
-
-The three pictures show the same 118 bookmarks of [bookmarks/example.json](bookmarks/example.json):
-
-| Firefox folders | Islands | Archipelago |
+| 1. Firefox folders | 2. Islands | 3. Archipelago |
 |:---:|:---:|:---:|
-| ![Bookmarks in their original Firefox folders](doc/folders.png) | ![Bookmarks organized in islands](doc/islands.png) | ![Islands with their terrain: relief, regions and rivers](doc/archipelago.png) |
-| `IslandedBrowser bookmarks/example.json` | `organize.py -i bookmarks/example.json`<br>then `IslandedBrowser private/organization.json` | same, plus `--terrain` |
+| ![Bookmarks in their original Firefox folders](doc/folders.png) | ![Bookmarks sorted into islands](doc/islands.png) | ![Islands with their land: relief, regions and rivers](doc/archipelago.png) |
 
-## 🚀 Quick start
+1. **Firefox folders**: the bookmarks as they are in Firefox, here a few catch-all folders.
+2. **Islands**: the same bookmarks sorted by subject. Each island has its color, communities are the medium discs, and blue bands across the sea (sea routes) join related islands.
+3. **Archipelago**: the same, with real land grown under the graph: coasts, relief whose summits are the big nodes, one region of cells per community, and rivers flowing down from the summits.
 
-Prerequisites: Python 3, GNU Make, g++, OpenMP and SFML 2.6.
+## 🚀 Try it (no Firefox needed)
+
+Prerequisites: Python 3, GNU Make, g++, OpenMP and SFML 2.6. Run every command from the project folder.
 
 ```sh
 git clone --recursive https://github.com/Lecrapouille/IslandedBrowser.git
 cd IslandedBrowser
-
-# 1. Export the Firefox bookmarks -> private/bookmarks.json
-./bookmarks/firefox_export.py
-
-# 2. Organize them in islands/communities -> private/organization.json
-./bookmarks/organize.py
-
-# 3. Build and draw the graph
 make
-./build/linux-gcc-normal/bin/IslandedBrowser private/organization.json   # islands
-./build/linux-gcc-normal/bin/IslandedBrowser private/bookmarks.json      # your Firefox folders
 
-# (optional) write the layout for the 3D archipelago of Compages (10e_Archipelago)
-./build/linux-gcc-normal/bin/IslandedBrowser private/organization.json --layout private/layout.json
+alias IslandedBrowser=./build/linux-gcc-normal/bin/IslandedBrowser
 
-# (optional) review private/organization.json: rename groups, edit the
-# "constraints", then run step 2 again and redraw.
-
-# 4. Write the files to load in Firefox    -> private/organized.html, private/organized.json
-./bookmarks/firefox_import.py
+IslandedBrowser -i examples/bookmarks.json   # picture 1: the Firefox folders
+IslandedBrowser -d examples                  # picture 2: the islands
+IslandedBrowser -d examples --terrain        # picture 3: the archipelago
 ```
 
-Then, in Firefox (library window, Ctrl+Shift+O, *Import and Backup*):
+In the window, hover a node to see it, click it to see its details, double-click to open it in Firefox, and press `H` for all the controls.
 
-- **safe**: *Import Bookmarks from HTML...* > `private/organized.html` adds everything in one new folder, your current bookmarks are kept;
-- **replace**: *Backup...* first, then *Restore* > *Choose File...* > `private/organized.json` erases all your bookmarks and loads the islands.
+## 🦊 With your own bookmarks: 4 steps
 
-All generated files contain personal data and go in `private/`, which git ignores.
+Each step reads the file written by the previous one. Your files go in `private/`, which git ignores because they hold your personal data. `examples/` holds the same files, with the same names, made from public bookmarks.
 
-## 🧪 Try it without your Firefox bookmarks
+```
+     1 export              2 sort                   3 look
+Firefox ───> bookmarks.json ───> organization.json ───> IslandedBrowser
+   ▲                                    │
+   └──── organized.html / .json <───────┘
+                    4 import
+```
 
-[bookmarks/example.json](bookmarks/example.json) is a Firefox backup of 118 public bookmarks (robotics, C++, graphics, machine learning, music, cooking, gardening, martial arts, 3D printing, travel, programming languages) spread in catch-all folders, as in a real collection. It replaces step 1:
+| Step | Command | Reads | Writes |
+|------|---------|-------|--------|
+| 1. Export | `./scripts/firefox_export.py` | Firefox (it can stay open) | `private/bookmarks.json` |
+| 2. Sort | `./scripts/organize.py` | `private/bookmarks.json` | `private/organization.json` |
+| 3. Look | `IslandedBrowser` | `private/organization.json` | (nothing) |
+| 4. Import | `./scripts/firefox_import.py` | `private/organization.json` | `private/organized.html`, `private/organized.json` |
 
 ```sh
-make
-
-# "Firefox folders" view: draw the Firefox file as it is.
-./build/linux-gcc-normal/bin/IslandedBrowser bookmarks/example.json
-
-# "Islands" view: organize it first (step 2), then draw the organization.
-./bookmarks/organize.py -i bookmarks/example.json -o /tmp/example-organization.json
-./build/linux-gcc-normal/bin/IslandedBrowser /tmp/example-organization.json
+./scripts/firefox_export.py
+./scripts/organize.py
+IslandedBrowser
+./scripts/firefox_import.py
 ```
 
-The `-o` option keeps the example away from `private/organization.json`, where your own organization lives. Without any argument, `IslandedBrowser` draws the first existing file among `private/organization.json`, `private/bookmarks.json` and `bookmarks/example.json`.
+**Fixing the sorting by hand.** Step 2 sorts the bookmarks automatically, so it makes mistakes: a bookmark can land in the wrong island, or a group can get a strange name made of keywords. You can correct it: open `private/organization.json`, change the `name` of a group to rename it, or edit the `constraints` section to move a bookmark, keep two bookmarks together or apart. Then run step 2 again: it redoes the sorting but keeps your corrections, even after a new export. The details are in *Correcting the result* in [doc/Pipeline.md](doc/Pipeline.md).
 
-The full documentation of each step (file formats, how the groups are computed, constraints, options, troubleshooting) is in [doc/Pipeline.md](doc/Pipeline.md).
+**Step 4, loading the result into Firefox** (library window, `Ctrl+Shift+O`, *Import and Backup*):
 
-## 🔀 Pipeline
+- **safe**: *Import Bookmarks from HTML...* > `private/organized.html`. Everything is added in one new folder, and your current bookmarks are kept.
+- **replace**: *Backup...* first, then *Restore* > *Choose File...* > `private/organized.json`. This erases all your bookmarks and loads the islands.
 
+## ⌨️ Command line
+
+The four programs share the same options. Each one also has `--help`.
+
+| Option | Meaning | Used by |
+|--------|---------|---------|
+| `-d DIR` | folder of the files (default: `private/`). Use `-d examples` for the example | all |
+| `-i FILE` | read this file instead of the usual one of `DIR` | `organize.py`, `firefox_import.py`, `IslandedBrowser` |
+| `-o FILE` | write this file instead of the usual one of `DIR` | `firefox_export.py`, `organize.py` |
+
+The usual files of a folder:
+
+| File | Written by | Content |
+|------|------------|---------|
+| `bookmarks.json` | `firefox_export.py` | your Firefox bookmarks, as they are |
+| `organization.json` | `organize.py` | the islands, communities and similarity links, plus your corrections |
+| `layout.json` | `IslandedBrowser --layout` | the position of every node, for the 3D archipelago of Compages |
+| `organized.html`, `organized.json` | `firefox_import.py` | the islands as files Firefox can load |
+
+`IslandedBrowser` draws `DIR/organization.json`, or `DIR/bookmarks.json` when there is no organization yet. Without `-d`, it uses `private/`, or `examples/` when `private/` is empty. Its own options:
+
+| Option | Effect |
+|--------|--------|
+| `--terrain` | grow land under the graph (key `T` in the window) |
+| `--screenshot FILE` | save the window as a PNG once the map stops moving, then quit |
+| `--layout [FILE]` | no window: write the position of every node in `DIR/layout.json` (or `FILE`), then quit |
+
+For example, the three pictures above and the example layout were made with:
+
+```sh
+./scripts/organize.py -d examples
+IslandedBrowser -d examples --layout
+IslandedBrowser -i examples/bookmarks.json --screenshot doc/folders.png
+IslandedBrowser -d examples --screenshot doc/islands.png
+IslandedBrowser -d examples --terrain --screenshot doc/archipelago.png
 ```
-Firefox ──1──> private/bookmarks.json ──2──> private/organization.json ──3──> IslandedBrowser
-   ^                                                  │
-   └───────────────────────4──────────────────────────┘
-                 private/organized.html  or  private/organized.json
-```
 
-| Step | Script | Output |
-|------|--------|--------|
-| 1. Export | `bookmarks/firefox_export.py` | Firefox tree read from `places.sqlite` (a copy, Firefox can stay open) |
-| 2. Organize | `bookmarks/organize.py` | TF-IDF similarity, nearest neighbour graph, Louvain: islands > communities > bookmarks |
-| 3. Draw | `IslandedBrowser` | force-directed layout, one color per island, rivers between related islands |
-| 4. Import | `bookmarks/firefox_import.py` | the organization as Firefox bookmark files |
+The options to tune the sorting (`--island-resolution`, `--fetch`...), the file formats and a troubleshooting guide are in [doc/Pipeline.md](doc/Pipeline.md).
 
-In the window: hover a node to see its title and highlight its community, click to select it (details in the right panel), double-click to open a bookmark or zoom on a folder, middle click to open a folder's first 15 bookmarks, drag to pan, wheel to zoom. Keys: `/` search, `Enter` open, `Z` zoom on the selection, `F` fit, `T` terrain, `H` help, `Esc` unselect then quit. All the controls are in [doc/Pipeline.md](doc/Pipeline.md) and behind `H`.
+## 🖱️ In the window
+
+| Mouse | Action |
+|-------|--------|
+| hover | title and URL; the community lights up, the rest of the map fades |
+| click | select: details in the right panel (its lines can be clicked) |
+| double click | open a bookmark in Firefox, zoom on a folder |
+| middle click, `Ctrl` + click | open in Firefox (a folder: its first 15 bookmarks) |
+| drag, wheel | move, zoom |
+
+| Key | Action |
+|-----|--------|
+| `H` | help (all the controls) |
+| `/` | search the titles and URLs |
+| `Enter` | open the selection in Firefox |
+| `Z`, `F` | zoom on the selection, show the whole map |
+| `T`, `L`, `N` | show or hide the terrain, the links, the names |
+| `Space`, `R` | pause, restart the layout |
+| `S` | screenshot (`islanded-browser.png`) |
+| `Esc` | close, unselect, then quit |
 
 ## 🧮 Algorithms
 
-This section explains, without math, how a pile of bookmarks becomes a map. The two big steps are **sorting** the bookmarks into subjects (Python, `bookmarks/organize.py`) and **drawing** them (C++, `src/`).
+This section explains, without math, how a pile of bookmarks becomes a map. The two big steps are **sorting** the bookmarks into subjects (Python, `scripts/organize.py`) and **drawing** them (C++, `src/`).
 
 ### 1. Sorting the bookmarks into subjects (`organize.py`)
 
@@ -133,9 +167,9 @@ Then communities with more than 40 bookmarks are split again, and communities wi
 
 **Speed.** Every node is pushed by every other node, so the work grows with the square of the number of bookmarks. The computation is shared among all the processor cores (OpenMP): with 2500 bookmarks, the layout settles in about 0.6 s.
 
-### 3. Drawing the map (`MapPainter`, `Rivers`, `Palette`)
+### 3. Drawing the map (`MapPainter`, `SeaRoutes`, `Palette`)
 
-**Rivers (`Rivers`).** For every pair of islands, the strengths of the similarity links between them are added up. Only the strongest pairs are kept (about two per island) and drawn as blue bands: the wider the band, the more the two islands have in common.
+**Sea routes (`SeaRoutes`).** Some similar bookmarks are on different islands. For every pair of islands, the strengths of the similarity links between them are added up. Only the strongest pairs are kept (about two per island) and drawn as blue bands across the sea: the wider the band, the more the two islands have in common. They are not rivers: the rivers are on the land (see 5).
 
 **Colors (`Palette`).** Each island gets its own color. Colors are picked around the color wheel in steps of 0.618 of a turn (the golden ratio). Two islands that follow each other therefore never get similar colors, whatever their number. Bookmarks use a lighter shade of their island color, like sand around a hill.
 
@@ -163,8 +197,8 @@ With `--terrain` or the `T` key, the graph gets real land under it, once the lay
 2. **Land or sea.** A round patch of land is laid on each node and a strip along each edge of the tree (island > community > bookmark). The layout keeps the islands far apart, so each island also grows into the free sea around it, up to a bit less than halfway to its closest neighbour: a strait always remains. Positions are bent by smooth random noise (`Noise`), so the coasts wave instead of being perfect circles.
 3. **Sea.** The sea is the water reached from the edges of the map, like paint poured from the borders. Water closed in by land would be a lake: it is filled.
 4. **Regions.** Each land cell joins the community of the closest node of its island, so the communities become regions side by side, separated by a light line.
-5. **Relief (`Erosion`).** The ground slowly rises (more inland, and more on the borders between regions) while rivers dig it, faster where they carry more water and where it is steeper. Repeated over a few million simulated years, this draws valleys between ridges: each region becomes a valley. A hollow with no way out is filled up to its lowest pass, so that all the water reaches the sea.
-6. **Rivers.** Every cell sends its water to its lowest neighbour. A cell that collects the water of enough cells carries a river, wider downstream.
+5. **Relief (`Erosion`).** The big nodes become the summits: the island node is the highest one, each community node a smaller peak, higher when the community holds more bookmarks. The ground slowly rises (most under the summits, a little everywhere inland) while the water digs it, faster where it carries more water and where it is steeper. Repeated over a few million simulated years, this draws ridges and valleys around the summits. A hollow with no way out is filled up to its lowest pass, so that all the water reaches the sea.
+6. **Rivers.** As the thesis asks, contents lie along rivers: a river springs from each summit. Like a drop of water, it always goes to the neighbouring cell down the steepest slope (it follows the gradient of the ground) until it reaches the sea. The island rivers are traced first; a community river that meets one of them flows into it and becomes its tributary. The zigzag through the cells is rounded into a smooth curve, and a river widens downstream, where it carries the water of a larger area.
 7. **Painting (`TerrainPainter`).** The sea gets lighter near the coast; the land goes from sand to grass, forest, rock and summits with the height, tinted by the color of its island. The relief is lit from the top left (hillshading): slopes facing the light are brighter, so hills look raised. The borders of the cells are drawn, firmer around the cell of a bookmark and bold between two regions.
 
 The same bookmarks always give the same land.
@@ -173,6 +207,8 @@ The same bookmarks always give the same land.
 
 | File | Role |
 |------|------|
+| `scripts/firefox_export.py`, `organize.py`, `firefox_import.py` | steps 1, 2 and 4 (Python, standard library only) |
+| `scripts/bookmarklib.py` | what the scripts share: reading Firefox, the `-d` option... |
 | `main.cpp` | reads the command line, opens the window or writes the layout file |
 | `Application` | window and main loop (events, update, draw) |
 | `Bookmarks`, `Json` | load a Firefox backup or an `organization.json` |
@@ -182,8 +218,8 @@ The same bookmarks always give the same land.
 | `IslandedBrowserGUI` | the conductor: turns mouse and keyboard events into actions |
 | `Camera` | visible part of the map, zoom, smooth moves |
 | `Selection` | hovered and selected nodes, what stays bright |
-| `MapPainter` | rivers, links, discs, names; finds the node under the mouse |
-| `Rivers`, `Palette`, `Meshes`, `NodeStyle` | rivers between islands, island colors, triangles of the shapes, disc sizes and node kinds |
+| `MapPainter` | sea routes, links, discs, names; finds the node under the mouse |
+| `SeaRoutes`, `Palette`, `Meshes`, `NodeStyle` | sea routes between islands, island colors, triangles of the shapes, disc sizes and node kinds |
 | `TextPainter` | writes texts, paints panel backgrounds, cuts long texts |
 | `Tooltip`, `DetailsPanel`, `SearchBox`, `StatusBar`, `Toast`, `HelpScreen` | the interface widgets |
 | `MouseTracker`, `MouseCursor` | click / double click / drag detection, pointer shape |

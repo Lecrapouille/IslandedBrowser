@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 ###############################################################################
-### Step 1: copy the Firefox bookmark tree into private/bookmarks.json.
+### Step 1: copy the Firefox bookmark tree into DIR/bookmarks.json (-d DIR,
+### private/ by default).
 ###
 ### The file has the same shape as the backup Firefox writes from the library
 ### window, plus the visit counts, descriptions and tags already stored in
@@ -16,19 +17,22 @@ import bookmarklib
 
 ###############################################################################
 ### Entry point.
-### -o, --output: JSON file to write.
+### -d, --dir: folder of the files (default: private/).
+### -o, --output: JSON file to write (default: DIR/bookmarks.json).
 ### --profile: Firefox profile directory when autodetection fails.
 ###############################################################################
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 1: copy the Firefox bookmark tree into private/bookmarks.json.")
+        description="Step 1: copy the Firefox bookmark tree into DIR/bookmarks.json.")
+    bookmarklib.add_dir_argument(parser)
     parser.add_argument(
-        "-o", "--output", type=Path, default=bookmarklib.PRIVATE_DIR / "bookmarks.json",
-        help="JSON written (default: private/bookmarks.json)")
+        "-o", "--output", type=Path, default=None,
+        help="JSON written (default: DIR/bookmarks.json)")
     parser.add_argument(
         "--profile", type=Path, default=None,
         help="Firefox profile directory, when the automatic detection fails")
     args = parser.parse_args()
+    args.output = bookmarklib.file_in(args.output, args.dir, "bookmarks.json")
 
     profile = bookmarklib.find_firefox_profile(args.profile)
     connection, temporary = bookmarklib.open_places(profile)

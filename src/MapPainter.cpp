@@ -32,16 +32,16 @@
 //------------------------------------------------------------------------------
 MapPainter::MapPainter(sf::RenderTarget& target, IslandedBrowser const& island,
                        Camera const& camera, Palette const& palette,
-                       Selection const& selection, Rivers const& rivers,
+                       Selection const& selection, SeaRoutes const& routes,
                        TextPainter const& painter)
     : m_target(target), m_island(island), m_camera(camera), m_palette(palette),
-      m_selection(selection), m_rivers(rivers), m_painter(painter)
+      m_selection(selection), m_routes(routes), m_painter(painter)
 {}
 
 //------------------------------------------------------------------------------
 void MapPainter::drawMap(std::vector<size_t> const& matches)
 {
-    drawRivers();
+    drawSeaRoutes();
     drawEdges();
     drawNodes(matches);
 }
@@ -87,26 +87,26 @@ sf::Color MapPainter::colorOf(ForceDirectedGraph::Vertex const& vertex) const
 }
 
 //------------------------------------------------------------------------------
-//! A river is wider and more opaque when the two islands share more similar
+//! A sea route is wider and more opaque when the two islands share more similar
 //! bookmarks. Its width is given in pixels, so it is converted into world
 //! units with the current zoom.
 //------------------------------------------------------------------------------
-void MapPainter::drawRivers()
+void MapPainter::drawSeaRoutes()
 {
     if (!m_show_links)
         return;
     float const s = m_camera.scale();
     auto const& vertices = m_island.layout().vertices();
     sf::VertexArray triangles(sf::Triangles);
-    for (Rivers::River const& river: m_rivers.list())
+    for (SeaRoutes::Route const& route: m_routes.list())
     {
-        sf::Color color = RIVER_COLOR;
-        color.a = sf::Uint8(40.0f + 120.0f * river.strength);
-        if (m_selection.dimmed(vertices[river.a].node) &&
-            m_selection.dimmed(vertices[river.b].node))
+        sf::Color color = SEA_ROUTE_COLOR;
+        color.a = sf::Uint8(40.0f + 120.0f * route.strength);
+        if (m_selection.dimmed(vertices[route.a].node) &&
+            m_selection.dimmed(vertices[route.b].node))
             color.a = sf::Uint8(color.a / 4);
-        mesh::band(triangles, vertices[river.a].position, vertices[river.b].position,
-                   (1.0f + 7.0f * river.strength) * s, color);
+        mesh::band(triangles, vertices[route.a].position, vertices[route.b].position,
+                   (1.0f + 7.0f * route.strength) * s, color);
     }
     m_target.draw(triangles);
 }
@@ -137,7 +137,7 @@ void MapPainter::drawEdges()
         else if (m_show_links && vertices[spring.a].island == vertices[spring.b].island)
         {
             // Links inside an island, tinted by the island. Links between
-            // islands are summarized by the rivers.
+            // islands are summarized by the sea routes.
             sf::Color color = colorOf(vertices[spring.a]);
             color.a = faded ? 8 : 25;
             mesh::line(links, a, b, color);

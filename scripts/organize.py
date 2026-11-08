@@ -2,9 +2,9 @@
 ###############################################################################
 ### Step 2: build a provisional thematic organization of the bookmarks.
 ###
-### Input: a Firefox backup tree (private/bookmarks.json, written by
+### Input: a Firefox backup tree (DIR/bookmarks.json, written by
 ### firefox_export.py or by "Backup..." in the Firefox library window).
-### Output: private/organization.json, read by the C++ renderer and by
+### Output: DIR/organization.json, read by the C++ renderer and by
 ### firefox_import.py.
 ###
 ### Pipeline:
@@ -110,11 +110,13 @@ PATH_STOPWORDS = {
 ###############################################################################
 def main():
     parser = argparse.ArgumentParser(
-        description="Step 2: provisional thematic organization of Firefox bookmarks.")
-    parser.add_argument("-i", "--input", type=Path, default=bookmarklib.PRIVATE_DIR / "bookmarks.json",
-                        help="Firefox backup tree (default: private/bookmarks.json)")
-    parser.add_argument("-o", "--output", type=Path, default=bookmarklib.PRIVATE_DIR / "organization.json",
-                        help="organization written (default: private/organization.json)")
+        description="Step 2: sort the bookmarks of DIR/bookmarks.json into islands "
+                    "and communities, written in DIR/organization.json.")
+    bookmarklib.add_dir_argument(parser)
+    parser.add_argument("-i", "--input", type=Path, default=None,
+                        help="Firefox bookmarks (default: DIR/bookmarks.json)")
+    parser.add_argument("-o", "--output", type=Path, default=None,
+                        help="organization written (default: DIR/organization.json)")
     parser.add_argument("--neighbors", type=int, default=NEIGHBORS,
                         help="nearest neighbours linked to each bookmark")
     parser.add_argument("--min-similarity", type=float, default=MIN_SIMILARITY,
@@ -126,14 +128,16 @@ def main():
     parser.add_argument("--keep-duplicates", action="store_true",
                         help="keep several bookmarks pointing to the same URL")
     parser.add_argument("--fetch", action="store_true",
-                        help="download pages without description (cached in private/.cache)")
+                        help="download pages without description (cached in DIR/.cache)")
     parser.add_argument("--fetch-limit", type=int, default=0,
                         help="maximum number of pages to download (0 = all missing)")
     parser.add_argument("--seed", type=int, default=0, help="random seed of Louvain")
     args = parser.parse_args()
+    args.input = bookmarklib.file_in(args.input, args.dir, "bookmarks.json")
+    args.output = bookmarklib.file_in(args.output, args.dir, "organization.json")
 
     if not args.input.is_file():
-        sys.exit(f"{args.input} is missing. Run bookmarks/firefox_export.py first.")
+        sys.exit(f"{args.input} is missing. Run scripts/firefox_export.py first.")
 
     constraints = load_constraints(args.output)
     tree = json.loads(args.input.read_text(encoding="utf-8"))
@@ -141,7 +145,7 @@ def main():
     if not items:
         sys.exit(f"No bookmark in {args.input}.")
     if args.fetch:
-        fetch_descriptions(items, bookmarklib.PRIVATE_DIR / ".cache" / "pages.json", args.fetch_limit)
+        fetch_descriptions(items, args.dir / ".cache" / "pages.json", args.fetch_limit)
 
     surfaces = defaultdict(Counter)
     vectors = vectorize(items, surfaces)

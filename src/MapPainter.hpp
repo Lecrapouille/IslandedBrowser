@@ -28,16 +28,16 @@
 
 #  include "Camera.hpp"
 #  include "Colors.hpp"
-#  include "Rivers.hpp"
+#  include "SeaRoutes.hpp"
 #  include "Selection.hpp"
 #  include "TextPainter.hpp"
 #  include <vector>
 
 // ****************************************************************************
-//! \brief Draws the archipelago itself: rivers, links, discs and names.
+//! \brief Draws the archipelago itself: sea routes, links, discs and names.
 //!
 //! The drawing goes from the back to the front, like a painter: first the
-//! rivers (in the sea), then the lines, then the discs, then the names on
+//! sea routes, then the lines, then the discs, then the names on
 //! top of everything. Nodes out of the focus (see Selection) are tinted with
 //! the color of the sea, so they seem to sink.
 // ****************************************************************************
@@ -47,11 +47,11 @@ public:
 
     MapPainter(sf::RenderTarget& target, IslandedBrowser const& island,
                Camera const& camera, Palette const& palette,
-               Selection const& selection, Rivers const& rivers,
+               Selection const& selection, SeaRoutes const& routes,
                TextPainter const& painter);
 
     //-------------------------------------------------------------------------
-    //! \brief Draw the rivers, the links and the discs. Must be called with
+    //! \brief Draw the sea routes, the links and the discs. Must be called with
     //! the world view of the camera.
     //! \param[in] matches search results to circle (empty when not searching).
     //-------------------------------------------------------------------------
@@ -70,14 +70,14 @@ public:
     //-------------------------------------------------------------------------
     size_t nodeAt(sf::Vector2i pixel) const;
 
-    //! \brief Key L: show or hide the similarity links and the rivers.
+    //! \brief Key L: show or hide the similarity links and the sea routes.
     void toggleLinks() { m_show_links = !m_show_links; }
     //! \brief Key N: show or hide the names.
     void toggleNames() { m_show_names = !m_show_names; }
 
 private:
 
-    void drawRivers();
+    void drawSeaRoutes();
     //! \brief Tree lines (island > community > bookmark) and the similarity
     //! links inside each island.
     void drawEdges();
@@ -104,7 +104,7 @@ private:
     Camera const& m_camera;
     Palette const& m_palette;
     Selection const& m_selection;
-    Rivers const& m_rivers;
+    SeaRoutes const& m_routes;
     TextPainter const& m_painter;
     bool m_show_links = true;
     bool m_show_names = true;

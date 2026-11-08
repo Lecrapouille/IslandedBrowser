@@ -35,7 +35,7 @@
 #  include "MapPainter.hpp"
 #  include "MouseCursor.hpp"
 #  include "MouseTracker.hpp"
-#  include "Rivers.hpp"
+#  include "SeaRoutes.hpp"
 #  include "SearchBox.hpp"
 #  include "Selection.hpp"
 #  include "StatusBar.hpp"
@@ -66,7 +66,7 @@
 //! - left or right drag: pan; wheel: zoom around the cursor.
 //! Keys: H help, / search, Enter open, Z zoom on the selection, F fit,
 //! arrows pan, +/- zoom, Space pause, R restart the layout, L links and
-//! rivers, N names, T terrain, S screenshot, Esc close/unselect then quit.
+//! sea routes, N names, T terrain, S screenshot, Esc close/unselect then quit.
 // ****************************************************************************
 class IslandedBrowserGUI: public Application::GUI
 {
@@ -154,7 +154,7 @@ private:
     TextPainter m_painter;
     Camera m_camera;
     Palette m_palette;
-    Rivers m_rivers;
+    SeaRoutes m_routes;
     Selection m_selection;
     MapPainter m_map;
     Tooltip m_tooltip;

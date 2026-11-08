@@ -12,8 +12,26 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 # Generated files hold personal data (URLs, titles, visit counts): they all go
-# in private/ at the root of the project, which git ignores.
+# in private/ at the root of the project, which git ignores. examples/ holds
+# the same files, with the same names, made from public bookmarks.
 PRIVATE_DIR = Path(__file__).resolve().parent.parent / "private"
+
+
+###############################################################################
+### The option shared by every program of the project: -d DIR, the folder of
+### the files (bookmarks.json, organization.json, layout.json...).
+###############################################################################
+def add_dir_argument(parser):
+    parser.add_argument("-d", "--dir", type=Path, default=PRIVATE_DIR,
+                        help="folder of the files (default: private/; "
+                             "examples/ holds the public example)")
+
+
+###############################################################################
+### A file given with -i/-o, or else its usual name in the folder of -d.
+###############################################################################
+def file_in(given, directory, name):
+    return given if given is not None else directory / name
 
 # Platforms where the domain says almost nothing about the subject.
 HUB_DOMAINS = {

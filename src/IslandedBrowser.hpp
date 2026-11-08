@@ -42,8 +42,8 @@ public:
 
     //----------------------------------------------------------------------
     //! \brief Load the bookmark file and compute the initial layout.
-    //! \param[in] path organization.json (bookmarks/organize.py) or a
-    //! Firefox backup (bookmarks/firefox_export.py).
+    //! \param[in] path organization.json (scripts/organize.py) or a
+    //! Firefox backup (scripts/firefox_export.py).
     //! \throw std::runtime_error when the file cannot be used.
     //----------------------------------------------------------------------
     explicit IslandedBrowser(std::string const& path);

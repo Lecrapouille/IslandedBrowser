@@ -23,47 +23,47 @@
 ********************************************************************************
 */
 
-#ifndef RIVERS_HPP
-#  define RIVERS_HPP
+#ifndef SEA_ROUTES_HPP
+#  define SEA_ROUTES_HPP
 
 #  include "IslandedBrowser.hpp"
 #  include <vector>
 
 // ****************************************************************************
-//! \brief Rivers are the blue bands joining two islands that talk about
-//! close subjects.
+//! \brief Sea routes are the blue bands across the sea joining two islands
+//! that talk about close subjects (the rivers are on the land, see Terrain).
 //!
 //! organize.py links each bookmark to its most similar bookmarks. Most links
 //! stay inside an island, but some cross the sea. For each pair of islands,
 //! the strengths of the links crossing between them are added up; only the
-//! strongest pairs (about two per island) become rivers, so the map shows the
+//! strongest pairs (about two per island) become sea routes, so the map shows the
 //! main relations without turning into spaghetti.
 // ****************************************************************************
-class Rivers
+class SeaRoutes
 {
 public:
 
     //-------------------------------------------------------------------------
-    //! \brief One river between two islands.
+    //! \brief One sea route between two islands.
     //-------------------------------------------------------------------------
-    struct River
+    struct Route
     {
         //! \brief Vertices of the two islands (indices in the layout).
         size_t a;
         size_t b;
-        //! \brief 1 for the strongest river, smaller for the others.
+        //! \brief 1 for the strongest route, smaller for the others.
         float strength;
     };
 
 public:
 
-    explicit Rivers(IslandedBrowser const& island);
+    explicit SeaRoutes(IslandedBrowser const& island);
 
-    std::vector<River> const& list() const { return m_rivers; }
+    std::vector<Route> const& list() const { return m_routes; }
 
 private:
 
-    std::vector<River> m_rivers;
+    std::vector<Route> m_routes;
 };
 
 #endif

@@ -2,11 +2,13 @@
 private/
 
 # Safety net: any JSON could be a personal export saved in the wrong place.
-# Only the public example files of bookmarks/ are versioned.
+# Only the public example files of examples/ are versioned.
 *.json
-!bookmarks/example.json
-!bookmarks/example-organization.json
-!bookmarks/example-layout.json
+!examples/bookmarks.json
+!examples/organization.json
+!examples/layout.json
+# Files for Firefox made from the example: not versioned.
+examples/organized.*
 
 # Screenshots (key S, --screenshot)
 *.png

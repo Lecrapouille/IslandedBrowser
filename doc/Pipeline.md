@@ -1,35 +1,37 @@
 # 🔀 Bookmark pipeline
 
-This document details the four steps that turn unorganized Firefox bookmarks into an archipelago: export, organization, drawing, and import back into Firefox. The order of the commands is summarized in the [README](../README.md).
+This document details the four steps that turn unorganized Firefox bookmarks into an archipelago: export, sorting, drawing, and import back into Firefox. The [README](../README.md) gives the short version.
 
 ```
-Firefox ──1──> private/bookmarks.json ──2──> private/organization.json ──3──> IslandedBrowser
-   ^                                                  │
-   └───────────────────────4──────────────────────────┘
-                 private/organized.html  or  private/organized.json
+     1 export              2 sort                   3 look
+Firefox ───> bookmarks.json ───> organization.json ───> IslandedBrowser
+   ▲                                    │
+   └──── organized.html / .json <───────┘
+                    4 import
 ```
 
 ## 🔒 Files and privacy
 
-Every generated file contains personal data (URLs, titles, visit counts) and is written in `private/`, at the root of the project. Git ignores this folder: nothing in it can be committed by mistake. Delete it to start from scratch.
+All the files of a run go in one folder, always with the same names. By default it is `private/`, at the root of the project: the files hold personal data (URLs, titles, visit counts), so git ignores this folder and nothing in it can be committed by mistake. Delete it to start from scratch.
+
+Every program takes `-d DIR` to use another folder. `examples/` holds the same files made from 118 public bookmarks, so any command of this document works on the example with `-d examples`. `-i FILE` and `-o FILE` replace one file of the folder.
 
 | File | Written by | Read by | Content |
 |------|-----------|---------|---------|
-| `private/bookmarks.json` | `firefox_export.py` | `organize.py`, `IslandedBrowser` | Firefox bookmark tree, as is |
-| `private/organization.json` | `organize.py` | `firefox_import.py`, `IslandedBrowser`, `organize.py` (constraints) | islands, communities, similarity links, constraints |
-| `private/organized.html` | `firefox_import.py` | Firefox (import) | the organization, added in one folder |
-| `private/organized.json` | `firefox_import.py` | Firefox (restore) | the organization, replacing all bookmarks |
-| `private/.cache/pages.json` | `organize.py --fetch` | `organize.py --fetch` | page descriptions downloaded once |
+| `bookmarks.json` | `firefox_export.py` | `organize.py`, `IslandedBrowser` | Firefox bookmark tree, as is |
+| `organization.json` | `organize.py` | `firefox_import.py`, `IslandedBrowser`, `organize.py` (corrections) | islands, communities, similarity links, constraints |
+| `layout.json` | `IslandedBrowser --layout` | Compages (`10e_Archipelago`) | position of every node |
+| `organized.html` | `firefox_import.py` | Firefox (import) | the organization, added in one folder |
+| `organized.json` | `firefox_import.py` | Firefox (restore) | the organization, replacing all bookmarks |
+| `.cache/pages.json` | `organize.py --fetch` | `organize.py --fetch` | page descriptions downloaded once |
 
-Two JSON files are kept in git, without personal data: `bookmarks/example.json`, a Firefox backup of 118 public bookmarks drawn when `private/` is empty (run `./bookmarks/organize.py -i bookmarks/example.json` to organize it), and `bookmarks/sample.json`, a minimal three bookmark tree.
+The scripts need Python 3 only (standard library). Each one accepts `--help`.
 
-The scripts need Python 3 only (standard library). Each one accepts `--help` and options to read or write other paths than the defaults.
-
-## 📤 1. Export: `bookmarks/firefox_export.py`
+## 📤 1. Export: `scripts/firefox_export.py`
 
 ```
-./bookmarks/firefox_export.py
-./bookmarks/firefox_export.py --profile ~/.mozilla/firefox/xxxxxxxx.default-release
+./scripts/firefox_export.py
+./scripts/firefox_export.py --profile ~/.mozilla/firefox/xxxxxxxx.default-release
 ```
 
 - The default Firefox profile is found through `profiles.ini` (classic, Snap and Flatpak installations). Give `--profile` when it is not the one you use.
@@ -38,11 +40,12 @@ The scripts need Python 3 only (standard library). Each one accepts `--help` and
 
 A backup saved by hand also works: Firefox library (Ctrl+Shift+O) > *Import and Backup* > *Backup...*, saved as `private/bookmarks.json`.
 
-## 🗂️ 2. Organization: `bookmarks/organize.py`
+## 🗂️ 2. Sorting: `scripts/organize.py`
 
 ```
-./bookmarks/organize.py
-./bookmarks/organize.py --fetch          # also download missing page descriptions
+./scripts/organize.py
+./scripts/organize.py --fetch          # also download missing page descriptions
+./scripts/organize.py -d examples      # the example
 ```
 
 ### ⚙️ How the groups are built
@@ -112,12 +115,13 @@ Corrections are kept from one run to the next. Edit the file, then run `organize
 
 ```
 make
-./build/linux-gcc-normal/bin/IslandedBrowser                       # private/organization.json
-./build/linux-gcc-normal/bin/IslandedBrowser private/bookmarks.json  # original folders
-make run-IslandedBrowser ARGS="private/bookmarks.json"
+alias IslandedBrowser=./build/linux-gcc-normal/bin/IslandedBrowser
+IslandedBrowser                             # private/organization.json: the islands
+IslandedBrowser -i private/bookmarks.json   # your original Firefox folders
+IslandedBrowser -d examples --terrain       # the example, with its land
 ```
 
-Without argument, the first existing file among `private/organization.json`, `private/bookmarks.json` and `bookmarks/example.json` is drawn. Firefox roots without any bookmark (often *mobile* or *other bookmarks*) are not drawn. Drawing `private/bookmarks.json` shows the original folders, which is useful to compare with the organization.
+`IslandedBrowser` draws `DIR/organization.json`, or `DIR/bookmarks.json` when there is no organization yet. Without `-d`, `DIR` is `private/`, or `examples/` when `private/` is empty. A file given alone (`IslandedBrowser some/file.json`) is the same as `-i some/file.json`. Firefox roots without any bookmark (often *mobile* or *other bookmarks*) are not drawn. Drawing `bookmarks.json` shows the original folders, which is useful to compare with the organization.
 
 | Input | Action |
 |-------|--------|
@@ -136,35 +140,35 @@ Without argument, the first existing file among `private/organization.json`, `pr
 | arrows, `+`, `-` | pan, zoom |
 | `Space` | pause or resume the layout |
 | `R` | restart the layout |
-| `L` | show or hide links and rivers |
+| `L` | show or hide links and sea routes |
 | `N` | show or hide the names (community and bookmark names appear when zoomed in) |
-| `T` | show or hide the terrain: coasts, relief, Voronoi cells, regions, rivers (made once the layout is stable) |
+| `T` | show or hide the terrain: coasts, relief with the big nodes as summits, Voronoi cells, regions, rivers flowing down from the summits (made once the layout is stable) |
 | `S` | save `islanded-browser.png` |
 | `Esc` | close the help, unselect, then quit |
 | `Q` | quit |
 
 The status bar, at the bottom, recalls the file, the number of bookmarks and islands, the state of the layout and the shortcuts available at the moment.
 
-`--terrain` shows the terrain from the start (same as the `T` key). With `--screenshot`, the picture includes it: `doc/archipelago.png` was made with `IslandedBrowser organization.json --terrain --screenshot doc/archipelago.png`.
+`--terrain` shows the terrain from the start (same as the `T` key).
 
-`--screenshot file.png` saves the window once the layout has converged, then quits.
+`--screenshot FILE` saves the window as a PNG once the layout has converged, then quits; the mouse and the keyboard are ignored meanwhile. With `--terrain`, the picture includes the land: `IslandedBrowser -d examples --terrain --screenshot doc/archipelago.png`.
 
-`--layout file.json` computes the layout without a window and writes the position of every node, then quits. The [10e_Archipelago](https://github.com/Lecrapouille/Compages) demo of Compages builds a 3D archipelago around it: one island per island, one region per community, the bookmarks along the rivers. `bookmarks/example-layout.json` is the layout of `bookmarks/example-organization.json` (the organization of `bookmarks/example.json`):
+`--layout [FILE]` computes the layout without a window, writes the position of every node in `DIR/layout.json` (or `FILE`), then quits. The [10e_Archipelago](https://github.com/Lecrapouille/Compages) demo of Compages builds a 3D archipelago around it: one island per island, one region per community, the bookmarks along the rivers. `examples/layout.json` was made with:
 
 ```
-./bookmarks/organize.py -i bookmarks/example.json -o bookmarks/example-organization.json
-./build/linux-gcc-normal/bin/IslandedBrowser bookmarks/example-organization.json --layout bookmarks/example-layout.json
+./scripts/organize.py -d examples
+IslandedBrowser -d examples --layout
 ```
 
 The file is `{"format": "islanded-browser-layout", "version": 1, "source", "nodes", "links"}`; a node is `{"id", "parent"` (-1 for an island)`, "kind"` (`folder` or `bookmark`)`, "title", "url", "x", "y"}`; a link is `[id, id, similarity]`.
 
-Each island has its own color: large discs are islands, medium discs communities (or folders), small light dots bookmarks. Faint lines inside an island are similarity links. Blue bands are rivers: the strongest relations between two islands, wider when the islands share more similar bookmarks.
+Each island has its own color: large discs are islands, medium discs communities (or folders), small light dots bookmarks. Faint lines inside an island are similarity links. Blue bands across the sea are sea routes: the strongest relations between two islands, wider when the islands share more similar bookmarks. With the terrain (`T`), the rivers are on the land: each one springs from a big node and runs down the slope to the sea.
 
-## 📥 4. Import into Firefox: `bookmarks/firefox_import.py`
+## 📥 4. Import into Firefox: `scripts/firefox_import.py`
 
 ```
-./bookmarks/firefox_import.py
-./bookmarks/firefox_import.py --keywords 3   # also tag each bookmark with 3 keywords
+./scripts/firefox_import.py
+./scripts/firefox_import.py --keywords 3   # also tag each bookmark with 3 keywords
 ```
 
 Two files are written; use one of them.
@@ -182,7 +186,7 @@ Original tags are kept and written in the Firefox format (one comma separated st
 | `Firefox profile not found` | profile outside the usual folders | `firefox_export.py --profile PATH` |
 | `private/bookmarks.json is missing` | step 1 not done | run `firefox_export.py` |
 | `organization written by an older script` | file from a previous version | run `organize.py` again |
-| `no bookmark file given and none found` | `private/` empty and `bookmarks/example.json` missing | run steps 1 and 2, or give a file |
+| `neither organization.json nor bookmarks.json in DIR/` | wrong `-d`, or nothing exported yet | run step 1, or use `-d examples` |
 | `data/font.ttf not found` | program started outside the project folder | run it from the project root |
 | too many orphans | similarity threshold too high | lower `--min-similarity`, or use `--fetch` |
 | one huge island | resolution too low | raise `--island-resolution` |

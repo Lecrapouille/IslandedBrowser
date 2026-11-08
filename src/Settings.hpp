@@ -68,7 +68,7 @@
 #  define SEA_COLOR sf::Color(18, 32, 48)
 //! \brief Tree edges and similarity links
 #  define TREE_EDGE_COLOR sf::Color(200, 200, 200, 70)
-#  define RIVER_COLOR sf::Color(90, 170, 255, 60)
+#  define SEA_ROUTE_COLOR sf::Color(90, 170, 255, 60)
 //! \brief Size of the small texts (tooltip, panel, status bar)
 #  define SMALL_CHARACTER_SIZE 15
 //! \brief Width in pixels of the panel describing the selected node

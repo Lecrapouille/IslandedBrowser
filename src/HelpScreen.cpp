@@ -64,7 +64,7 @@ void HelpScreen::draw()
             { "Z  /  F", "zoom on the selection  /  fit the whole map" },
             { "Arrows,  +  -", "move, zoom" },
             { "Space  /  R", "pause  /  restart the layout" },
-            { "L  /  N", "show the links and rivers  /  the names" },
+            { "L  /  N", "show the links and sea routes  /  the names" },
             { "T", "terrain: relief, Voronoi cells, rivers" },
             { "S", "screenshot in islanded-browser.png" },
             { "Esc  /  Q", "close, unselect, then quit  /  quit" } } },
@@ -72,7 +72,7 @@ void HelpScreen::draw()
             { "Big disc", "island (a subject)" },
             { "Medium disc", "community or folder" },
             { "Small disc", "bookmark" },
-            { "Blue bands", "rivers: islands with similar bookmarks" } } }
+            { "Blue bands", "sea routes: islands with similar bookmarks" } } }
     };
 
     // Height of the page: title, sections (header, entries, gap), footer.

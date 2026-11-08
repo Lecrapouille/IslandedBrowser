@@ -31,12 +31,17 @@
 namespace {
 
 //------------------------------------------------------------------------------
-//! \brief "private/organization.json" -> "organization.json".
+//! \brief The file and its folder, which tells private/ from examples/:
+//! "/home/me/IslandedBrowser/examples/organization.json" ->
+//! "examples/organization.json".
 //------------------------------------------------------------------------------
 std::string fileName(std::string const& path)
 {
     size_t const slash = path.find_last_of('/');
-    return (slash == std::string::npos) ? path : path.substr(slash + 1u);
+    if (slash == std::string::npos || slash == 0u)
+        return path;
+    size_t const before = path.find_last_of('/', slash - 1u);
+    return (before == std::string::npos) ? path : path.substr(before + 1u);
 }
 
 } // namespace
@@ -51,9 +56,9 @@ IslandedBrowserGUI::IslandedBrowserGUI(Application& application, const char* nam
       m_painter(m_renderer, "data/font.ttf"),
       m_camera(m_renderer),
       m_palette(m_island),
-      m_rivers(m_island),
+      m_routes(m_island),
       m_selection(m_island),
-      m_map(m_renderer, m_island, m_camera, m_palette, m_selection, m_rivers, m_painter),
+      m_map(m_renderer, m_island, m_camera, m_palette, m_selection, m_routes, m_painter),
       m_tooltip(m_painter, m_island, m_palette),
       m_panel(m_painter, m_island, m_palette),
       m_search(m_painter, m_island),
@@ -265,7 +270,7 @@ void IslandedBrowserGUI::updateTerrain()
     sf::Clock clock;
     m_terrain.build(m_island);
     m_terrain_painter.update();
-    std::cout << "Terrain: " << m_terrain.streams().size() << " river pieces in "
+    std::cout << "Terrain: " << m_terrain.rivers().size() << " rivers in "
               << clock.getElapsedTime().asMilliseconds() << " ms" << std::endl;
     if (m_camera.following())
         fitView();
@@ -288,6 +293,11 @@ void IslandedBrowserGUI::handleInput()
     sf::Event event;
     while (m_renderer.pollEvent(event))
     {
+        // --screenshot: a mouse or a key must not move the map before the
+        // picture is taken.
+        if (!m_screenshot.empty() && event.type != sf::Event::Closed &&
+            event.type != sf::Event::Resized)
+            continue;
         switch (event.type)
         {
         case sf::Event::Closed:

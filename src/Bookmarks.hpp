@@ -62,7 +62,7 @@ struct BookmarkNode
 
 // *****************************************************************************
 //! \brief Similarity between two bookmarks, computed by organize.py. Links
-//! are not part of the tree: they are the transversal relations ("rivers")
+//! are not part of the tree: they are the transversal relations ("sea routes")
 //! between communities and islands.
 // *****************************************************************************
 struct BookmarkLink
@@ -88,7 +88,7 @@ struct Bookmarks
     size_t bookmark_count = 0;
 
     //! \brief Load a Firefox backup (bookmarks.json) or an organization
-    //! written by bookmarks/organize.py (organization.json).
+    //! written by scripts/organize.py (organization.json).
     //! \throw std::runtime_error on unreadable or empty files.
     static Bookmarks load(std::string const& path);
 };
