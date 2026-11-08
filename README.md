@@ -9,13 +9,13 @@ Notes:
 
 ## Compilation process
 
-Prerequisites: You need a g++, makefile, openmp and the library libsfml. They are easily install on your operating system.
+Prerequisites: GNU Make 4.2, g++, OpenMP and libsfml. They are easily install on your operating system.
 
 Step one: git clone the [IslandedBrowser](https://github.com/Lecrapouille/IslandedBrowser) repository but do not compile it yet!
 In your Linux console, type the following command:
 
 ```
-git clone https://github.com/Lecrapouille/IslandedBrowser.git --depth=1
+git clone --recursive https://github.com/Lecrapouille/IslandedBrowser.git
 cd IslandedBrowser
 ```
 
@@ -31,9 +31,9 @@ Step three: Save your Firefox bookmarks as JSON file into `IslandedBrowser/bookm
 - See this video on how to save the bookmarks: https://youtu.be/n-aw0ZNRby0
 
 Step four: Compile the IslandedBrowser:
-- `make -j8`
-- The Makefile will do it for you: it will call the Python3 `bookmarks/bookmark.py` to generate the C++ source file in `src/bookmarks.cpp` from `bookmarks/bookmarks.json`.
-- You can run the application: `./build/IslandedBrowser`
+- `make`
+- The Makefile calls `bookmarks/parser.py`, which generates the C++ source from `bookmarks/bookmarks.json`.
+- You can run the application: `make run-IslandedBrowser`
 
 Step five: Click on an URL this will open your Firefox. Click on a node this will open all URLs as child.
 - Bookmarks are in blue.
@@ -62,7 +62,7 @@ Under developement:
 - A 450 Kb JSON file is long to get the graph expanded.
 - I finally not sure that expanded graph looks nice. Bookmarks are not a balanced tree but looks like more a flat tree.
 
-## Example src/Bookmarks.cpp
+## Example of the generated Bookmarks.cpp
 
 ```c++
 #include "IslandedBrowser.hpp"

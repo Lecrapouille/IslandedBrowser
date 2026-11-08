@@ -1,7 +1,7 @@
 # IslandedBrowser
 *.json
-src/Bookmarks.cpp
-build/*
+build/
+compile_commands.json
 *~
 
 # Prerequisites
