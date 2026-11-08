@@ -1,10 +1,16 @@
 # 🏝️ Islanded Browser
 
-This is a in gestation personal experience for the [Stigmee](https://github.com/stigmee) for displaying your (Firefox) browser bookmarks as an 3D island.
+[Islanded Browser](https://github.com/Lecrapouille/IslandedBrowser) was a personal prototype for the [Stigmee](https://github.com/stigmee) for displaying your browser (Firefox) bookmarks as an 3D island.
+
+![islanded_browser](doc/islanded_browser.png)
+
+Note: Since Stigmee is discontinued, you can find a 3D example for testing my 3D renderer [Compages](https://github.com/Lecrapouille/Compages) based on this repo. The current repo is based on exporting bookmarks and making the layout.
+![Compages](doc/3d.png)
 
 Notes:
 
-- I wrote *bookmarks* not *tabs* because I never have 500 tabs opened in my browser but have so many unorganized bookmarks.
+- I wrote *bookmarks* not *tabs* because it seems that I'm the only guy that never have 500 tabs opened in my browser.
+- At contrary I have so many unorganized bookmarks (no folders). Currently the algorithm for organizing does coarse work to make hierarchy island > regions > Voronoï cells. The main goal of this project was to create island from bookmarks.
 - I used Firefox, I do not use Chrome browser but I guess the process is identical.
 - A [Youtube tutorial](https://youtu.be/_IjCipUK8Bk) shows an older version of the project.
 
@@ -13,18 +19,15 @@ Notes:
 There is one program, `IslandedBrowser`, and what it draws depends on the JSON file it is given:
 
 - a **Firefox bookmark file** (`private/bookmarks.json` written by step 1, or `bookmarks/example.json`) is drawn with its original Firefox folders (left): here, a few catch-all folders;
-- an **organization file** (`private/organization.json` written by step 2, `organize.py`) is drawn as islands (right): one island per subject, communities inside each island, and blue rivers between related islands.
+- an **organization file** (`private/organization.json` written by step 2, `organize.py`) is drawn as islands (middle): one island per subject, communities inside each island, and blue rivers between related islands;
+- with `--terrain` (or the `T` key), real land is grown under the graph (right): coasts, relief shaped by erosion, one region of Voronoi cells per community, and rivers.
 
-Both pictures show the same 118 bookmarks of [bookmarks/example.json](bookmarks/example.json):
+The three pictures show the same 118 bookmarks of [bookmarks/example.json](bookmarks/example.json):
 
-| Firefox folders | Islands |
-|:---:|:---:|
-| ![Bookmarks in their original Firefox folders](doc/folders.png) | ![Bookmarks organized in islands](doc/islands.png) |
-| `IslandedBrowser bookmarks/example.json` | `organize.py -i bookmarks/example.json`<br>then `IslandedBrowser private/organization.json` |
-
-Since Stigmee is discontinued, you can find a 3D example for testing my 3D renderer [Compages](https://github.com/Lecrapouille/Compages) based on this project.
-
-![Compages](doc/3d.png)
+| Firefox folders | Islands | Archipelago |
+|:---:|:---:|:---:|
+| ![Bookmarks in their original Firefox folders](doc/folders.png) | ![Bookmarks organized in islands](doc/islands.png) | ![Islands with their terrain: relief, regions and rivers](doc/archipelago.png) |
+| `IslandedBrowser bookmarks/example.json` | `organize.py -i bookmarks/example.json`<br>then `IslandedBrowser private/organization.json` | same, plus `--terrain` |
 
 ## 🚀 Quick start
 
@@ -97,7 +100,7 @@ Firefox ──1──> private/bookmarks.json ──2──> private/organizatio
 | 3. Draw | `IslandedBrowser` | force-directed layout, one color per island, rivers between related islands |
 | 4. Import | `bookmarks/firefox_import.py` | the organization as Firefox bookmark files |
 
-In the window: hover a node to see its title and highlight its community, click to select it (details in the right panel), double-click to open a bookmark or zoom on a folder, middle click to open a folder's first 15 bookmarks, drag to pan, wheel to zoom. Keys: `/` search, `Enter` open, `Z` zoom on the selection, `F` fit, `H` help, `Esc` unselect then quit. All the controls are in [doc/Pipeline.md](doc/Pipeline.md) and behind `H`.
+In the window: hover a node to see its title and highlight its community, click to select it (details in the right panel), double-click to open a bookmark or zoom on a folder, middle click to open a folder's first 15 bookmarks, drag to pan, wheel to zoom. Keys: `/` search, `Enter` open, `Z` zoom on the selection, `F` fit, `T` terrain, `H` help, `Esc` unselect then quit. All the controls are in [doc/Pipeline.md](doc/Pipeline.md) and behind `H`.
 
 ## 🧮 Algorithms
 
@@ -152,6 +155,20 @@ Then communities with more than 40 bookmarks are split again, and communities wi
 
 **Cutting long texts (`TextPainter::wrap`).** Letters are added to a line until it is full, then the line is cut after its last space so words stay whole. A word longer than a whole line (an URL) is cut anywhere. If the text still does not fit in the allowed number of lines, it ends with "…".
 
+### 5. Growing land under the graph (`Terrain`, `TerrainPainter`)
+
+With `--terrain` or the `T` key, the graph gets real land under it, once the layout has stopped moving (a fraction of a second). The method is the one of the 3D archipelago of [Compages](https://github.com/Lecrapouille/Compages) (`10e_Archipelago`), itself after A. Patel's *Polygonal Map Generation*, here in 2D and without moving the nodes:
+
+1. **Cells (`VoronoiGrid`).** The map is cut into a few tens of thousands of cells, like the plots of a land register. A cell is the area closer to its center (its "site") than to any other site: a Voronoi diagram. The sites are placed on a grid and moved a little at random, so the cells look natural, and finding the cell of a point only takes nine distances.
+2. **Land or sea.** A round patch of land is laid on each node and a strip along each edge of the tree (island > community > bookmark). The layout keeps the islands far apart, so each island also grows into the free sea around it, up to a bit less than halfway to its closest neighbour: a strait always remains. Positions are bent by smooth random noise (`Noise`), so the coasts wave instead of being perfect circles.
+3. **Sea.** The sea is the water reached from the edges of the map, like paint poured from the borders. Water closed in by land would be a lake: it is filled.
+4. **Regions.** Each land cell joins the community of the closest node of its island, so the communities become regions side by side, separated by a light line.
+5. **Relief (`Erosion`).** The ground slowly rises (more inland, and more on the borders between regions) while rivers dig it, faster where they carry more water and where it is steeper. Repeated over a few million simulated years, this draws valleys between ridges: each region becomes a valley. A hollow with no way out is filled up to its lowest pass, so that all the water reaches the sea.
+6. **Rivers.** Every cell sends its water to its lowest neighbour. A cell that collects the water of enough cells carries a river, wider downstream.
+7. **Painting (`TerrainPainter`).** The sea gets lighter near the coast; the land goes from sand to grass, forest, rock and summits with the height, tinted by the color of its island. The relief is lit from the top left (hillshading): slopes facing the light are brighter, so hills look raised. The borders of the cells are drawn, firmer around the cell of a bookmark and bold between two regions.
+
+The same bookmarks always give the same land.
+
 ## 🗂️ Source code
 
 | File | Role |
@@ -170,8 +187,10 @@ Then communities with more than 40 bookmarks are split again, and communities wi
 | `TextPainter` | writes texts, paints panel backgrounds, cuts long texts |
 | `Tooltip`, `DetailsPanel`, `SearchBox`, `StatusBar`, `Toast`, `HelpScreen` | the interface widgets |
 | `MouseTracker`, `MouseCursor` | click / double click / drag detection, pointer shape |
+| `Terrain`, `TerrainPainter` | land, regions, relief and rivers under the graph; their picture |
+| `VoronoiGrid`, `Erosion`, `Noise`, `Maths` | cells of the map, uplift and river erosion, smooth randomness, small helpers |
 
-Next steps: Voronoi cells around the communities, height maps for islands, 3D rendering.
+Next steps: 3D rendering (see the `10e_Archipelago` demo of [Compages](https://github.com/Lecrapouille/Compages)).
 
 ## 📚 References
 

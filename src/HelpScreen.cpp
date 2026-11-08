@@ -65,6 +65,7 @@ void HelpScreen::draw()
             { "Arrows,  +  -", "move, zoom" },
             { "Space  /  R", "pause  /  restart the layout" },
             { "L  /  N", "show the links and rivers  /  the names" },
+            { "T", "terrain: relief, Voronoi cells, rivers" },
             { "S", "screenshot in islanded-browser.png" },
             { "Esc  /  Q", "close, unselect, then quit  /  quit" } } },
         { "Map", {

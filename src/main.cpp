@@ -38,11 +38,13 @@ namespace {
 void usage(char const* program)
 {
     std::cout
-        << "Usage: " << program << " [bookmarks.json] [--screenshot file.png] [--layout file.json]\n"
+        << "Usage: " << program << " [bookmarks.json] [--terrain] [--screenshot file.png] [--layout file.json]\n"
         << "  bookmarks.json  private/organization.json (bookmarks/organize.py)\n"
         << "                  or a Firefox backup (bookmarks/firefox_export.py).\n"
         << "                  Default: the first existing of private/organization.json,\n"
         << "                  private/bookmarks.json, bookmarks/example.json.\n"
+        << "  --terrain       draw the terrain (relief, Voronoi cells, rivers) under\n"
+        << "                  the graph from the start (key T).\n"
         << "  --screenshot    save the window once the layout has converged, then quit.\n"
         << "  --layout        compute the layout without a window, write the position\n"
         << "                  of every node in file.json (for Compages 10e_Archipelago),\n"
@@ -50,7 +52,7 @@ void usage(char const* program)
         << "Mouse: hover shows a node, click selects it, double-click opens a bookmark\n"
         << "       or zooms on a folder, middle click opens, drag pans, wheel zooms.\n"
         << "Keys: H help, / search, Enter open, Z zoom, F fit, Space pause, R restart,\n"
-        << "      L links, N names, S screenshot, Esc unselect then quit, Q quit.\n";
+        << "      L links, N names, T terrain, S screenshot, Esc unselect then quit, Q quit.\n";
 }
 
 //------------------------------------------------------------------------------
@@ -75,6 +77,7 @@ int main(int argc, char* argv[])
     std::string path;
     std::string screenshot;
     std::string layout;
+    bool terrain = false;
     for (int i = 1; i < argc; ++i)
     {
         std::string const arg(argv[i]);
@@ -83,7 +86,9 @@ int main(int argc, char* argv[])
             usage(argv[0]);
             return 0;
         }
-        if (arg == "--screenshot" && i + 1 < argc)
+        if (arg == "--terrain")
+            terrain = true;
+        else if (arg == "--screenshot" && i + 1 < argc)
             screenshot = argv[++i];
         else if (arg == "--layout" && i + 1 < argc)
             layout = argv[++i];
@@ -116,7 +121,7 @@ int main(int argc, char* argv[])
         }
         Application app(WINDOWS_WIDTH, WINDOWS_HEIGHT, "Islanded Browser");
         IslandedBrowserGUI& gui = app.create<IslandedBrowserGUI>(
-            "IslandedBrowserGUI", path, screenshot);
+            "IslandedBrowserGUI", path, screenshot, terrain);
         app.loop(gui);
     }
     catch (std::exception const& error)

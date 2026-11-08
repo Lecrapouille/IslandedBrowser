@@ -39,6 +39,8 @@
 #  include "SearchBox.hpp"
 #  include "Selection.hpp"
 #  include "StatusBar.hpp"
+#  include "Terrain.hpp"
+#  include "TerrainPainter.hpp"
 #  include "TextPainter.hpp"
 #  include "Toast.hpp"
 #  include "Tooltip.hpp"
@@ -64,7 +66,7 @@
 //! - left or right drag: pan; wheel: zoom around the cursor.
 //! Keys: H help, / search, Enter open, Z zoom on the selection, F fit,
 //! arrows pan, +/- zoom, Space pause, R restart the layout, L links and
-//! rivers, N names, S screenshot, Esc close/unselect then quit.
+//! rivers, N names, T terrain, S screenshot, Esc close/unselect then quit.
 // ****************************************************************************
 class IslandedBrowserGUI: public Application::GUI
 {
@@ -74,10 +76,13 @@ public:
     //! \param[in] bookmarks_path organization.json or Firefox backup.
     //! \param[in] screenshot when not empty, save the window to this PNG
     //! file once the layout has converged, then quit.
+    //! \param[in] terrain show the terrain (relief, Voronoi cells, rivers)
+    //! under the graph from the start (key T).
     //-------------------------------------------------------------------------
     IslandedBrowserGUI(Application& application, const char* name,
                        std::string const& bookmarks_path,
-                       std::string const& screenshot = std::string());
+                       std::string const& screenshot = std::string(),
+                       bool terrain = false);
 
 private: // Called by Application at each frame
 
@@ -125,6 +130,9 @@ private: // Actions
     //! \brief Show the whole map.
     void fitView();
     void saveScreenshot(std::string const& path);
+    //! \brief Make the terrain when it is shown and the layout has stopped
+    //! moving (it is made around the final positions of the nodes).
+    void updateTerrain();
     void quit();
 
 private: // Questions
@@ -157,6 +165,10 @@ private:
     HelpScreen m_help;
     MouseTracker m_mouse;
     MouseCursor m_cursor;
+    Terrain m_terrain;
+    TerrainPainter m_terrain_painter;
+    //! \brief Key T: the terrain is drawn under the graph.
+    bool m_show_terrain = false;
     //! \brief The user stopped the layout (Space).
     bool m_paused = false;
     //! \brief See the constructor; cleared once the screenshot is saved.

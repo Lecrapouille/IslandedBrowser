@@ -138,11 +138,14 @@ Without argument, the first existing file among `private/organization.json`, `pr
 | `R` | restart the layout |
 | `L` | show or hide links and rivers |
 | `N` | show or hide the names (community and bookmark names appear when zoomed in) |
+| `T` | show or hide the terrain: coasts, relief, Voronoi cells, regions, rivers (made once the layout is stable) |
 | `S` | save `islanded-browser.png` |
 | `Esc` | close the help, unselect, then quit |
 | `Q` | quit |
 
 The status bar, at the bottom, recalls the file, the number of bookmarks and islands, the state of the layout and the shortcuts available at the moment.
+
+`--terrain` shows the terrain from the start (same as the `T` key). With `--screenshot`, the picture includes it: `doc/archipelago.png` was made with `IslandedBrowser organization.json --terrain --screenshot doc/archipelago.png`.
 
 `--screenshot file.png` saves the window once the layout has converged, then quits.
 

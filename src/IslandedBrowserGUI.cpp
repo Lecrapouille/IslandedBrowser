@@ -44,7 +44,8 @@ std::string fileName(std::string const& path)
 //------------------------------------------------------------------------------
 IslandedBrowserGUI::IslandedBrowserGUI(Application& application, const char* name,
                                        std::string const& bookmarks_path,
-                                       std::string const& screenshot)
+                                       std::string const& screenshot,
+                                       bool terrain)
     : Application::GUI(application, name, SEA_COLOR),
       m_island(bookmarks_path),
       m_painter(m_renderer, "data/font.ttf"),
@@ -60,6 +61,8 @@ IslandedBrowserGUI::IslandedBrowserGUI(Application& application, const char* nam
       m_toast(m_painter),
       m_help(m_painter),
       m_cursor(m_renderer),
+      m_terrain_painter(m_terrain, m_palette),
+      m_show_terrain(terrain),
       m_screenshot(screenshot)
 {
     Bookmarks const& bookmarks = m_island.bookmarks();
@@ -129,7 +132,19 @@ StatusBar::Mode IslandedBrowserGUI::mode() const
 //------------------------------------------------------------------------------
 void IslandedBrowserGUI::fitView()
 {
-    m_camera.fit(m_island.layout().bounds());
+    sf::FloatRect area = m_island.layout().bounds();
+    // The land can reach beyond the nodes: show it whole.
+    if (m_show_terrain && m_terrain.ready())
+    {
+        sf::FloatRect const land = m_terrain.landBounds();
+        float const right = std::max(area.left + area.width, land.left + land.width);
+        float const bottom = std::max(area.top + area.height, land.top + land.height);
+        area.left = std::min(area.left, land.left);
+        area.top = std::min(area.top, land.top);
+        area.width = right - area.left;
+        area.height = bottom - area.top;
+    }
+    m_camera.fit(area);
 }
 
 //------------------------------------------------------------------------------
@@ -240,6 +255,20 @@ void IslandedBrowserGUI::saveScreenshot(std::string const& path)
     }
     std::cerr << "Cannot save " << path << std::endl;
     m_toast.show("Cannot save " + path);
+}
+
+//------------------------------------------------------------------------------
+void IslandedBrowserGUI::updateTerrain()
+{
+    if (!m_show_terrain || m_terrain.ready() || m_island.layout().isRunning())
+        return;
+    sf::Clock clock;
+    m_terrain.build(m_island);
+    m_terrain_painter.update();
+    std::cout << "Terrain: " << m_terrain.streams().size() << " river pieces in "
+              << clock.getElapsedTime().asMilliseconds() << " ms" << std::endl;
+    if (m_camera.following())
+        fitView();
 }
 
 //------------------------------------------------------------------------------
@@ -459,6 +488,8 @@ void IslandedBrowserGUI::onKeyPressed(sf::Event::KeyEvent const& key)
         m_toast.show(m_paused ? "Layout paused" : "Layout resumed");
         break;
     case sf::Keyboard::R:
+        // The land was made around the old positions.
+        m_terrain.clear();
         m_island.layout().restart();
         m_camera.follow();
         m_paused = false;
@@ -468,6 +499,11 @@ void IslandedBrowserGUI::onKeyPressed(sf::Event::KeyEvent const& key)
         break;
     case sf::Keyboard::N:
         m_map.toggleNames();
+        break;
+    case sf::Keyboard::T:
+        m_show_terrain = !m_show_terrain;
+        if (m_show_terrain && m_island.layout().isRunning())
+            m_toast.show("The terrain appears once the layout is stable");
         break;
     case sf::Keyboard::S:
         saveScreenshot("islanded-browser.png");
@@ -568,6 +604,7 @@ void IslandedBrowserGUI::update(const float dt)
     if (m_camera.following() && layout.isRunning())
         fitView();
     m_camera.update(dt);
+    updateTerrain();
 }
 
 //------------------------------------------------------------------------------
@@ -578,6 +615,8 @@ void IslandedBrowserGUI::draw()
 
     // The map moves and zooms with the camera...
     m_renderer.setView(m_camera.world());
+    if (m_show_terrain)
+        m_terrain_painter.draw(m_renderer);
     m_map.drawMap(m_search.matches());
 
     // ...the texts and the panels stay in place on the screen.
