@@ -25,6 +25,7 @@
 
 
 #include "IslandedBrowserGUI.hpp"
+#include "LayoutExport.hpp"
 #include <csignal>
 #include <fstream>
 #include <iostream>
@@ -37,14 +38,19 @@ namespace {
 void usage(char const* program)
 {
     std::cout
-        << "Usage: " << program << " [bookmarks.json] [--screenshot file.png]\n"
+        << "Usage: " << program << " [bookmarks.json] [--screenshot file.png] [--layout file.json]\n"
         << "  bookmarks.json  private/organization.json (bookmarks/organize.py)\n"
         << "                  or a Firefox backup (bookmarks/firefox_export.py).\n"
         << "                  Default: the first existing of private/organization.json,\n"
         << "                  private/bookmarks.json, bookmarks/example.json.\n"
         << "  --screenshot    save the window once the layout has converged, then quit.\n"
-        << "Keys: Space pause, R restart, F fit, L links, N names, S screenshot, Esc quit.\n"
-        << "Mouse: click opens bookmarks, wheel zooms, right drag pans.\n";
+        << "  --layout        compute the layout without a window, write the position\n"
+        << "                  of every node in file.json (for Compages 10e_Archipelago),\n"
+        << "                  then quit.\n"
+        << "Mouse: hover shows a node, click selects it, double-click opens a bookmark\n"
+        << "       or zooms on a folder, middle click opens, drag pans, wheel zooms.\n"
+        << "Keys: H help, / search, Enter open, Z zoom, F fit, Space pause, R restart,\n"
+        << "      L links, N names, S screenshot, Esc unselect then quit, Q quit.\n";
 }
 
 //------------------------------------------------------------------------------
@@ -68,6 +74,7 @@ int main(int argc, char* argv[])
 {
     std::string path;
     std::string screenshot;
+    std::string layout;
     for (int i = 1; i < argc; ++i)
     {
         std::string const arg(argv[i]);
@@ -78,6 +85,8 @@ int main(int argc, char* argv[])
         }
         if (arg == "--screenshot" && i + 1 < argc)
             screenshot = argv[++i];
+        else if (arg == "--layout" && i + 1 < argc)
+            layout = argv[++i];
         else if (!arg.empty() && arg[0] != '-' && path.empty())
             path = arg;
         else
@@ -94,6 +103,17 @@ int main(int argc, char* argv[])
     {
         if (path.empty())
             path = defaultBookmarks();
+        if (!layout.empty())
+        {
+            Bookmarks const bookmarks = Bookmarks::load(path);
+            ForceDirectedGraph graph;
+            graph.reset(bookmarks);
+            size_t const steps = graph.run();
+            writeLayout(layout, path, bookmarks, graph);
+            std::cout << layout << ": " << graph.vertices().size() << " nodes after "
+                      << steps << " steps" << std::endl;
+            return 0;
+        }
         Application app(WINDOWS_WIDTH, WINDOWS_HEIGHT, "Islanded Browser");
         IslandedBrowserGUI& gui = app.create<IslandedBrowserGUI>(
             "IslandedBrowserGUI", path, screenshot);

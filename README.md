@@ -3,6 +3,7 @@
 This is a in gestation personal experience for the [Stigmee](https://github.com/stigmee) for displaying your (Firefox) browser bookmarks as an 3D island.
 
 Notes:
+
 - I wrote *bookmarks* not *tabs* because I never have 500 tabs opened in my browser but have so many unorganized bookmarks.
 - I used Firefox, I do not use Chrome browser but I guess the process is identical.
 - A [Youtube tutorial](https://youtu.be/_IjCipUK8Bk) shows an older version of the project.
@@ -20,6 +21,10 @@ Both pictures show the same 118 bookmarks of [bookmarks/example.json](bookmarks/
 |:---:|:---:|
 | ![Bookmarks in their original Firefox folders](doc/folders.png) | ![Bookmarks organized in islands](doc/islands.png) |
 | `IslandedBrowser bookmarks/example.json` | `organize.py -i bookmarks/example.json`<br>then `IslandedBrowser private/organization.json` |
+
+Since Stigmee is discontinued, you can find a 3D example for testing my 3D renderer [Compages](https://github.com/Lecrapouille/Compages) based on this project.
+
+![Compages](doc/3d.png)
 
 ## 🚀 Quick start
 
@@ -39,6 +44,9 @@ cd IslandedBrowser
 make
 ./build/linux-gcc-normal/bin/IslandedBrowser private/organization.json   # islands
 ./build/linux-gcc-normal/bin/IslandedBrowser private/bookmarks.json      # your Firefox folders
+
+# (optional) write the layout for the 3D archipelago of Compages (10e_Archipelago)
+./build/linux-gcc-normal/bin/IslandedBrowser private/organization.json --layout private/layout.json
 
 # (optional) review private/organization.json: rename groups, edit the
 # "constraints", then run step 2 again and redraw.
@@ -89,7 +97,7 @@ Firefox ──1──> private/bookmarks.json ──2──> private/organizatio
 | 3. Draw | `IslandedBrowser` | force-directed layout, one color per island, rivers between related islands |
 | 4. Import | `bookmarks/firefox_import.py` | the organization as Firefox bookmark files |
 
-In the window: hover shows the title, a click opens the bookmark (a folder opens its first 15 bookmarks), wheel zooms, right drag pans. Keys: `Space` pause, `R` restart, `F` fit, `L` links, `N` names, `S` screenshot, `Esc` quit.
+In the window: hover a node to see its title and highlight its community, click to select it (details in the right panel), double-click to open a bookmark or zoom on a folder, middle click to open a folder's first 15 bookmarks, drag to pan, wheel to zoom. Keys: `/` search, `Enter` open, `Z` zoom on the selection, `F` fit, `H` help, `Esc` unselect then quit. All the controls are in [doc/Pipeline.md](doc/Pipeline.md) and behind `H`.
 
 ## 🧮 Algorithm
 

@@ -29,6 +29,7 @@
 #  include "Bookmarks.hpp"
 #  include "ForceDirectedGraph.hpp"
 #  include <string>
+#  include <utility>
 #  include <vector>
 
 // *****************************************************************************
@@ -64,6 +65,34 @@ public:
     //! \param[out] total number of bookmarks under the node.
     //----------------------------------------------------------------------
     std::vector<std::string> urls(size_t node, size_t max_count, size_t& total) const;
+
+    //----------------------------------------------------------------------
+    //! \brief Number of bookmarks under the node (1 for a bookmark).
+    //----------------------------------------------------------------------
+    size_t bookmarkCount(size_t node) const;
+
+    //----------------------------------------------------------------------
+    //! \brief The node and all its descendants.
+    //----------------------------------------------------------------------
+    std::vector<size_t> subtree(size_t node) const;
+
+    //----------------------------------------------------------------------
+    //! \brief Folders from the island down to the parent of the node (the
+    //! root is not included).
+    //----------------------------------------------------------------------
+    std::vector<size_t> ancestors(size_t node) const;
+
+    //----------------------------------------------------------------------
+    //! \brief Nodes whose title or URL contains the text (case insensitive
+    //! for ASCII letters). Folders come first, then bookmarks.
+    //----------------------------------------------------------------------
+    std::vector<size_t> search(std::string const& text) const;
+
+    //----------------------------------------------------------------------
+    //! \brief Bookmarks the most similar to a bookmark (similarity links
+    //! of organize.py), strongest first, at most max_count.
+    //----------------------------------------------------------------------
+    std::vector<std::pair<size_t, float>> related(size_t node, size_t max_count) const;
 
     //----------------------------------------------------------------------
     //! \brief Start the web browser on the given URLs, without a shell (an

@@ -121,18 +121,39 @@ Without argument, the first existing file among `private/organization.json`, `pr
 
 | Input | Action |
 |-------|--------|
-| hover | title and URL in the top bar |
-| left click | open the bookmark in Firefox; on a folder, its first 15 bookmarks |
-| wheel / right drag | zoom / pan |
+| hover | tooltip (title, URL, island and community); the community is highlighted, the rest of the map fades |
+| left click | select: the right panel shows the details (where it is, URL, content of a folder, similar bookmarks); its entries can be clicked |
+| click on the sea | unselect |
+| double click | open a bookmark in Firefox; zoom on a folder |
+| middle click, `Ctrl` + click | open in Firefox; on a folder, its first 15 bookmarks |
+| left or right drag | pan |
+| wheel | zoom around the cursor |
+| `H`, `F1`, `?` | show or hide the help |
+| `/`, `Ctrl` + `F` | search the titles and URLs: `Enter`/`↓` next result, `↑` previous, `Ctrl` + `Enter` open, `Esc` close |
+| `Enter`, `O` | open the selection in Firefox |
+| `Z` | zoom on the selection |
+| `F` | fit the view to the graph |
+| arrows, `+`, `-` | pan, zoom |
 | `Space` | pause or resume the layout |
 | `R` | restart the layout |
-| `F` | fit the view to the graph |
 | `L` | show or hide links and rivers |
-| `N` | show or hide island names |
+| `N` | show or hide the names (community and bookmark names appear when zoomed in) |
 | `S` | save `islanded-browser.png` |
-| `Esc` | quit |
+| `Esc` | close the help, unselect, then quit |
+| `Q` | quit |
+
+The status bar, at the bottom, recalls the file, the number of bookmarks and islands, the state of the layout and the shortcuts available at the moment.
 
 `--screenshot file.png` saves the window once the layout has converged, then quits.
+
+`--layout file.json` computes the layout without a window and writes the position of every node, then quits. The [10e_Archipelago](https://github.com/Lecrapouille/Compages) demo of Compages builds a 3D archipelago around it: one island per island, one region per community, the bookmarks along the rivers. `bookmarks/example-layout.json` is the layout of `bookmarks/example-organization.json` (the organization of `bookmarks/example.json`):
+
+```
+./bookmarks/organize.py -i bookmarks/example.json -o bookmarks/example-organization.json
+./build/linux-gcc-normal/bin/IslandedBrowser bookmarks/example-organization.json --layout bookmarks/example-layout.json
+```
+
+The file is `{"format": "islanded-browser-layout", "version": 1, "source", "nodes", "links"}`; a node is `{"id", "parent"` (-1 for an island)`, "kind"` (`folder` or `bookmark`)`, "title", "url", "x", "y"}`; a link is `[id, id, similarity]`.
 
 Each island has its own color: large discs are islands, medium discs communities (or folders), small light dots bookmarks. Faint lines inside an island are similarity links. Blue bands are rivers: the strongest relations between two islands, wider when the islands share more similar bookmarks.
 

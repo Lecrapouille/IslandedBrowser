@@ -32,12 +32,6 @@
 #  define WINDOWS_HEIGHT 1080
 //! \brief Text size
 #  define CHARACTER_SIZE 20
-//! \brief MessageBar SIZE
-#  define MESSAGEBAR_HEIGHT (CHARACTER_SIZE + 5)
-//! \brief Duration in seconds for fading text in message box
-#  define MESSAGEBAR_FADING_DURATION 2.5f
-//! \brief Color of the messagebar
-#  define MESSAGEBAR_COLOR sf::Color::Green
 //! \brief If set draw arrow heads for graph edges
 #  undef DRAW_ARROW_HEAD
 //! \brief Arrow head size for drawin graph edges
@@ -53,7 +47,7 @@
 //! \brief Layout border
 #  define LAYOUT_BORDER_X NODE_RADIUS
 //! \brief Layout border
-#  define LAYOUT_BORDER_Y (NODE_RADIUS + MESSAGEBAR_HEIGHT)
+#  define LAYOUT_BORDER_Y NODE_RADIUS
 //! \brief Layout color
 #  define LAYOUT_COLOR sf::Color::Red
 //! \brief Color of folder nodes
@@ -75,5 +69,34 @@
 //! \brief Tree edges and similarity links
 #  define TREE_EDGE_COLOR sf::Color(200, 200, 200, 70)
 #  define RIVER_COLOR sf::Color(90, 170, 255, 60)
+//! \brief Size of the small texts (tooltip, panel, status bar)
+#  define SMALL_CHARACTER_SIZE 15
+//! \brief Width in pixels of the panel describing the selected node
+#  define PANEL_WIDTH 420.0f
+//! \brief Height in pixels of the status bar at the bottom of the window
+#  define STATUSBAR_HEIGHT 26.0f
+//! \brief Background of the panels (tooltip, details, help, status bar)
+#  define PANEL_COLOR sf::Color(10, 18, 28, 225)
+#  define PANEL_BORDER_COLOR sf::Color(90, 120, 150, 160)
+//! \brief Texts of the panels
+#  define TEXT_COLOR sf::Color(235, 235, 235)
+#  define DIM_TEXT_COLOR sf::Color(150, 160, 175)
+#  define URL_COLOR sf::Color(120, 190, 255)
+//! \brief Seconds a notification stays before fading out
+#  define TOAST_DURATION 3.0f
+//! \brief Ring drawn around the selected node
+#  define SELECTION_COLOR sf::Color(255, 220, 80)
+//! \brief How much the nodes out of the focus fade into the sea (0..1)
+#  define DIM_FACTOR 0.75f
+//! \brief Maximum delay in seconds between the two clicks of a double click
+#  define DOUBLE_CLICK_DELAY 0.4f
+//! \brief Mouse moves (pixels) under which a press is a click, not a drag
+#  define DRAG_THRESHOLD 4
+//! \brief Zoom (pixels per world unit) from which the community names, then
+//! the bookmark titles, are written
+#  define COMMUNITY_LABEL_ZOOM 1.2f
+#  define BOOKMARK_LABEL_ZOOM 3.0f
+//! \brief Maximum number of children or similar bookmarks listed in the panel
+#  define PANEL_MAX_ROWS 16
 
 #endif
