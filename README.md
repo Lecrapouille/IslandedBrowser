@@ -1,101 +1,103 @@
-# Islanded Browser
+# 🏝️ Islanded Browser
 
 This is a in gestation personal experience for the [Stigmee](https://github.com/stigmee) for displaying your (Firefox) browser bookmarks as an 3D island.
 
 Notes:
 - I wrote *bookmarks* not *tabs* because I never have 500 tabs opened in my browser but have so many unorganized bookmarks.
 - I used Firefox, I do not use Chrome browser but I guess the process is identical.
-- You can click on the picture below, to see my Youtube tutorial [![video](doc/screenshot.png)](https://youtu.be/_IjCipUK8Bk) but with real collection of bookmarks, the graph is currently not displayed well as showned in the screenshot.
+- A [Youtube tutorial](https://youtu.be/_IjCipUK8Bk) shows an older version of the project.
 
-## Compilation process
+## 📸 Screenshots
 
-Prerequisites: GNU Make 4.2, g++, OpenMP and libsfml. They are easily install on your operating system.
+There is one program, `IslandedBrowser`, and what it draws depends on the JSON file it is given:
 
-Step one: git clone the [IslandedBrowser](https://github.com/Lecrapouille/IslandedBrowser) repository but do not compile it yet!
-In your Linux console, type the following command:
+- a **Firefox bookmark file** (`private/bookmarks.json` written by step 1, or `bookmarks/example.json`) is drawn with its original Firefox folders (left): here, a few catch-all folders;
+- an **organization file** (`private/organization.json` written by step 2, `organize.py`) is drawn as islands (right): one island per subject, communities inside each island, and blue rivers between related islands.
 
-```
+Both pictures show the same 118 bookmarks of [bookmarks/example.json](bookmarks/example.json):
+
+| Firefox folders | Islands |
+|:---:|:---:|
+| ![Bookmarks in their original Firefox folders](doc/folders.png) | ![Bookmarks organized in islands](doc/islands.png) |
+| `IslandedBrowser bookmarks/example.json` | `organize.py -i bookmarks/example.json`<br>then `IslandedBrowser private/organization.json` |
+
+## 🚀 Quick start
+
+Prerequisites: Python 3, GNU Make, g++, OpenMP and SFML 2.6.
+
+```sh
 git clone --recursive https://github.com/Lecrapouille/IslandedBrowser.git
 cd IslandedBrowser
+
+# 1. Export the Firefox bookmarks -> private/bookmarks.json
+./bookmarks/firefox_export.py
+
+# 2. Organize them in islands/communities -> private/organization.json
+./bookmarks/organize.py
+
+# 3. Build and draw the graph
+make
+./build/linux-gcc-normal/bin/IslandedBrowser private/organization.json   # islands
+./build/linux-gcc-normal/bin/IslandedBrowser private/bookmarks.json      # your Firefox folders
+
+# (optional) review private/organization.json: rename groups, edit the
+# "constraints", then run step 2 again and redraw.
+
+# 4. Write the files to load in Firefox    -> private/organized.html, private/organized.json
+./bookmarks/firefox_import.py
 ```
 
-Step two: organize your Firefox bookmarks and save them as JSON file:
-- Move your favorite URL into folders.
-- Give them some more explicit names.
-- Add some tags separated by commas.
-- See this video on how to open the bookmarks organizer window: https://youtu.be/ZCSd5wcHcnQ
+Then, in Firefox (library window, Ctrl+Shift+O, *Import and Backup*):
 
-Step three: Save your Firefox bookmarks as JSON file into `IslandedBrowser/bookmarks/bookmarks.json`:
-- On Firefox, do not click on the button "export to HTML" but instead on the button "Save..."
-- Save to this location: `IslandedBrowser/bookmarks/bookmarks.json`.
-- See this video on how to save the bookmarks: https://youtu.be/n-aw0ZNRby0
+- **safe**: *Import Bookmarks from HTML...* > `private/organized.html` adds everything in one new folder, your current bookmarks are kept;
+- **replace**: *Backup...* first, then *Restore* > *Choose File...* > `private/organized.json` erases all your bookmarks and loads the islands.
 
-Step four: Compile the IslandedBrowser:
-- `make`
-- The Makefile calls `bookmarks/parser.py`, which generates the C++ source from `bookmarks/bookmarks.json`. Without that file, `bookmarks/sample.json` is used.
-- You can run the application: `make run-IslandedBrowser`
+All generated files contain personal data and go in `private/`, which git ignores.
 
-Step five: Click on an URL this will open your Firefox. Click on a node this will open all URLs as child.
-- Bookmarks are in blue.
-- Folders are in red.
+## 🧪 Try it without your Firefox bookmarks
 
-## Algorithm
+[bookmarks/example.json](bookmarks/example.json) is a Firefox backup of 118 public bookmarks (robotics, C++, graphics, machine learning, music, cooking, gardening, martial arts, 3D printing, travel, programming languages) spread in catch-all folders, as in a real collection. It replaces step 1:
 
-Pipeline:
-- The JSON file is parsed in to two separated set: folders and URLs. This is considered as low cost database.
-- The folder and URL sets are parsed into a graph.
-- The graph is expanded through a force-directed-graphs algorithm.
+```sh
+make
 
-Under developement:
-- The expanded graph is converted into a 3D scene.
-- A spatial hash is used to fasten URL search when the user is clicking on the scene.
+# "Firefox folders" view: draw the Firefox file as it is.
+./build/linux-gcc-normal/bin/IslandedBrowser bookmarks/example.json
 
-## Work in progress
-
-- The force-directed-graphs algorithm is slow.
-- Thinking on how to generate heigh maps from the graph.
-- Generate 3D meshes and use OpenGL.
-- Display URL when mouse is pointing on node
-
-## Limitation
-
-- A 450 Kb JSON file is long to get the graph expanded.
-- I finally not sure that expanded graph looks nice. Bookmarks are not a balanced tree but looks like more a flat tree.
-
-## Example of the generated Bookmarks.cpp
-
-```c++
-#include "IslandedBrowser.hpp"
-
-void IslandedBrowser::init(Bookmarks& bookmarks, Folders& folders)
-{
-    folders =
-    {
-        { 0, { .title = "", .id = 0, .parent = 0 } },
-        { 2, { .title = "Bookmarks Toolbar", .id = 2, .parent = 0 } },
-        { 1660, { .title = "qq", .id = 1660, .parent = 2 } },
-    };
-
-    bookmarks =
-    {
-        { 1722, { .title = "DMT004 Decentralized Meta Transactions - Google Docs", .uri = "https://docs.google.com/document/d/1U_fN6fbhdHBUnbibeWhgwtDbDFLSeSk3wu60VVo9ykw/edit", .id = 1722, .parent = 1660 } },
-        { 1723, { .title = "Équipements Arts Martiaux et Sports de Combat – VMA Self Défense", .uri = "https://vmaselfdefense-online.com/collections/equipement-art-martiaux", .id = 1723, .parent = 1660 } },
-        { 1724, { .title = "chromiumembedded / cef / wiki / BranchesAndBuilding — Bitbucket", .uri = "https://bitbucket.org/chromiumembedded/cef/wiki/BranchesAndBuilding", .id = 1724, .parent = 1660 } },
-        { 1725, { .title = "limmh/cef_mfc_demo: Integrating Chromium Embedded Framework (CEF) in a sample MFC application", .uri = "https://github.com/limmh/cef_mfc_demo", .id = 1725, .parent = 1660 } },
-        { 1726, { .title = "CEF3 C++ API Docs - Version 80.1.4+g8927396+chromium-80.0.3987.149", .uri = "https://magpcss.org/ceforum/apidocs3/", .id = 1726, .parent = 1660 } },
-        { 1727, { .title = "Feature: Vulkan Support · Issue #631 · NVIDIA/nvidia-docker", .uri = "https://github.com/NVIDIA/nvidia-docker/issues/631", .id = 1727, .parent = 1660 } },
-        { 1728, { .title = "A Simple Windows Example Using the Chromium Embedded Framework 3 - CodeProject", .uri = "https://www.codeproject.com/Tips/785840/A-Simple-Windows-Example-Using-the-Chromium-Embedd", .id = 1728, .parent = 1660 } },
-        { 1729, { .title = "fphammerle/docker-brave-browser: brave-browser https://brave.com/ 🐳", .uri = "https://github.com/fphammerle/docker-brave-browser", .id = 1729, .parent = 1660 } },
-        { 1730, { .title = "How can I generate a Git patch for a specific commit? - Stack Overflow", .uri = "https://stackoverflow.com/questions/6658313/how-can-i-generate-a-git-patch-for-a-specific-commit", .id = 1730, .parent = 1660 } },
-        { 1731, { .title = "git - How to shallow clone a specific commit with depth 1? - Stack Overflow", .uri = "https://stackoverflow.com/questions/31278902/how-to-shallow-clone-a-specific-commit-with-depth-1", .id = 1731, .parent = 1660 } },
-        { 1732, { .title = "Pinterest", .uri = "https://www.pinterest.fr/", .id = 1732, .parent = 1660 } },
-        { 1733, { .title = "zouzias/docker-boost: Docker images for Boost's C++ libraries", .uri = "https://github.com/zouzias/docker-boost", .id = 1733, .parent = 1660 } },
-        { 1734, { .title = "Docker Hub", .uri = "https://hub.docker.com/repository/docker/lecrapouille/chreage", .id = 1734, .parent = 1660 } },
-    };
-}
+# "Islands" view: organize it first (step 2), then draw the organization.
+./bookmarks/organize.py -i bookmarks/example.json -o /tmp/example-organization.json
+./build/linux-gcc-normal/bin/IslandedBrowser /tmp/example-organization.json
 ```
 
-## References
+The `-o` option keeps the example away from `private/organization.json`, where your own organization lives. Without any argument, `IslandedBrowser` draws the first existing file among `private/organization.json`, `private/bookmarks.json` and `bookmarks/example.json`.
+
+The full documentation of each step (file formats, how the groups are computed, constraints, options, troubleshooting) is in [doc/Pipeline.md](doc/Pipeline.md).
+
+## 🔀 Pipeline
+
+```
+Firefox ──1──> private/bookmarks.json ──2──> private/organization.json ──3──> IslandedBrowser
+   ^                                                  │
+   └───────────────────────4──────────────────────────┘
+                 private/organized.html  or  private/organized.json
+```
+
+| Step | Script | Output |
+|------|--------|--------|
+| 1. Export | `bookmarks/firefox_export.py` | Firefox tree read from `places.sqlite` (a copy, Firefox can stay open) |
+| 2. Organize | `bookmarks/organize.py` | TF-IDF similarity, nearest neighbour graph, Louvain: islands > communities > bookmarks |
+| 3. Draw | `IslandedBrowser` | force-directed layout, one color per island, rivers between related islands |
+| 4. Import | `bookmarks/firefox_import.py` | the organization as Firefox bookmark files |
+
+In the window: hover shows the title, a click opens the bookmark (a folder opens its first 15 bookmarks), wheel zooms, right drag pans. Keys: `Space` pause, `R` restart, `F` fit, `L` links, `N` names, `S` screenshot, `Esc` quit.
+
+## 🧮 Algorithm
+
+The force-directed layout (`src/ForceDirectedGraph.cpp`) follows Fruchterman and Reingold: every pair of vertices repels (K²/d), springs attract (strength × d²/K), a weak gravity keeps the islands together, and the displacements are bounded by a temperature that cools down so the layout stops. Springs are the tree edges (island > community > bookmark) and the similarity links; a link between two islands is 30 times weaker, so related islands get closer without merging. Each island starts in its own disc on a sunflower spiral. With 2500 bookmarks the layout converges in about 0.6 s (OpenMP).
+
+Next steps: Voronoi cells around the communities, height maps for islands, 3D rendering.
+
+## 📚 References
 
 - Philipp Kindermann Youtube videos [Force-Directed Drawings (1/3)](https://youtu.be/WWm-g2nLHds)
 - https://github.com/qdHe/Parallelized-Force-directed-Graph-Drawing
