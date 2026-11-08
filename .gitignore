@@ -1,5 +1,6 @@
 # IslandedBrowser
 *.json
+!bookmarks/sample.json
 build/
 compile_commands.json
 *~

@@ -31,8 +31,8 @@
 #  include <SFML/Graphics/Color.hpp>
 #  include <map>
 #  include <vector>
-#  include <cstdlib>
 #  include <cmath>
+#  include <random>
 
 // *****************************************************************************
 //! \brief Force-directed graph drawing algorithms are a class of algorithms for
@@ -44,12 +44,13 @@
 //! forces either to simulate the motion of the edges and nodes or to minimize
 //! their energy.
 //!
-//! Use the spring/repulsion model of Fruchterman and Reingold (1991) with:
-//! - Attractive force: af(d) = d^2 / k
-//! - Repulsive force: rf(d) = -k^2 / d
-//! where d is distance between two vertices and the optimal distance between
-//! vertices k is defined as C * sqrt( area / num_vertices ) where C is a
-//! parameter we can adjust.
+//! Use the spring/repulsion model of Fruchterman and Reingold (1991), in the
+//! form used by TimedPetriNetEditor:
+//! - Attractive force: af(d) = d^2 / k (connected nodes attract)
+//! - Repulsive force: rf(d) = k^2 / d (every node repels the others)
+//! - Gravity: pulls nodes toward the center so the layout stays compact
+//! Displacements are limited by a temperature that cools down (simulated
+//! annealing). k = C * sqrt(area / num_vertices) is the ideal distance.
 //!
 //! For more information see this video https://youtu.be/WWm-g2nLHds
 //! This code source is largely inspired by:
@@ -79,14 +80,8 @@ public:
             size_t id;
         };
 
-        //! \brief World coordinate position. Position are randomized between 0
-        //! and 1. The scaling to the windows dimension is made later since we
-        //! prefer this astructure does know to the windows class.
-        sf::Vector2f position =
-        {
-            float(rand()) / float(RAND_MAX),
-            float(rand()) / float(RAND_MAX)
-        };
+        //! \brief World coordinate position, set by reset().
+        sf::Vector2f position = { 0.0f, 0.0f };
 
         //! \brief Displacement due to attractive and reuplsive forces.
         sf::Vector2f displacement = { 0.0f, 0.0f };
@@ -99,6 +94,23 @@ public:
     };
 
     using Vertices = std::vector<ForceDirectedGraph::Vertex>;
+
+    //----------------------------------------------------------------------
+    //! \brief Algorithm parameters (can be tuned).
+    //----------------------------------------------------------------------
+    struct Parameters
+    {
+        //! \brief Gravity toward the center (0 disables it).
+        float gravity = 0.1f;
+        //! \brief Temperature decay per step.
+        float cooling_rate = 0.95f;
+        //! \brief Iterations computed by each update().
+        int steps_per_frame = 3;
+        //! \brief Stop once the temperature falls below this.
+        float min_temperature = 0.5f;
+    };
+
+    Parameters params;
 
 public:
 
@@ -114,10 +126,17 @@ public:
     void reset();
 
     //----------------------------------------------------------------------
-    //! \brief Compute one step of forces if temperature is still hot else
-    //! do nothing.
+    //! \brief Compute several steps of forces while the layout is still warm.
     //----------------------------------------------------------------------
     void update();
+
+    //----------------------------------------------------------------------
+    //! \brief The layout is still moving.
+    //----------------------------------------------------------------------
+    bool isRunning() const
+    {
+        return m_temperature >= params.min_temperature;
+    }
 
     //----------------------------------------------------------------------
     //! \brief Const getter of vertices.
@@ -150,6 +169,8 @@ private:
     //! \brief Do a single step for computing forces.
     //----------------------------------------------------------------------
     void step();
+    void initializePositions();
+    void buildNeighbors();
 
     //----------------------------------------------------------------------
     //! \brief Euclidian norm.
@@ -166,7 +187,7 @@ private:
     //----------------------------------------------------------------------
     inline float repulsive_force(float const distance) const
     {
-        return K * K / distance / float(N) / 2.0f;
+        return m_K * m_K / distance;
     }
 
     //----------------------------------------------------------------------
@@ -175,16 +196,15 @@ private:
     //----------------------------------------------------------------------
     inline float attractive_force(float const distance) const
     {
-        return distance * distance / K / float(N);
+        return distance * distance / m_K;
     }
 
     //----------------------------------------------------------------------
     //! \brief Reduce effect of forces.
     //----------------------------------------------------------------------
-    inline float cooling()
+    inline void cooling()
     {
-        m_temperature *= 0.98f;
-        return m_temperature;
+        m_temperature *= params.cooling_rate;
     }
 
 private:
@@ -198,11 +218,11 @@ private:
     //! \brief Dimension of the screen.
     float m_height;
     //! \brief Reduce effect of forces.
-    float m_temperature;
-    //! \brief Force coeficient: sqrt(area / num_vertices)
-    float K;
-    //! \brief Number of vertices.
-    size_t N;
+    float m_temperature = 0.0f;
+    //! \brief Ideal distance between nodes: C * sqrt(area / num_vertices).
+    float m_K = 1.0f;
+    //! \brief Random generator for the initial disk of positions.
+    std::mt19937 m_rng{42};
 };
 
 #endif

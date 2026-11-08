@@ -25,6 +25,9 @@
 
 #include "ForceDirectedGraph.hpp"
 #include "Settings.hpp"
+#include <algorithm>
+#include <unordered_map>
+#include <unordered_set>
 
 //------------------------------------------------------------------------------
 ForceDirectedGraph::ForceDirectedGraph(sf::Vector2f const dimension, DiGraph& digraph)
@@ -34,66 +37,83 @@ ForceDirectedGraph::ForceDirectedGraph(sf::Vector2f const dimension, DiGraph& di
 //------------------------------------------------------------------------------
 void ForceDirectedGraph::reset()
 {
-    // convert std::set to std::vector to have direct access
     std::vector<DiGraph::Node> nodes(m_digraph.nodes().begin(),
                                      m_digraph.nodes().end());
-    N = nodes.size();
-    K = sqrtf(m_width * m_height / float(N));
-    m_temperature = m_width + m_height;
-    m_vertices.resize(N);
+    const size_t count = nodes.size();
+    m_vertices.clear();
+    if (count == 0u)
+    {
+        m_temperature = 0.0f;
+        return;
+    }
 
-    // Copy graph nodes to Graph vertices
-    #pragma omp parallel for default(shared) schedule(dynamic)
-    for (size_t n = 0u; n < N; ++n)
+    // Ideal distance, a little tighter than the plain Fruchterman-Reingold k.
+    m_K = sqrtf(m_width * m_height / float(count)) * 0.75f;
+    m_temperature = std::min(m_width, m_height) / 2.0f;
+    m_vertices.resize(count);
+
+    for (size_t n = 0u; n < count; ++n)
     {
         Vertex& v = m_vertices[n];
         v.id = nodes[n];
-        v.position.x *= m_width;
-        v.position.y *= m_height;
-        v.displacement.x = 0.0f;
-        v.displacement.y = 0.0f;
+        v.displacement = { 0.0f, 0.0f };
         v.color = (m_digraph.degree(v.id) == 0u)
                   ? BOOKMARK_COLOR
                   : FOLDER_COLOR;
     }
 
-    // Lookup table: Node ID to index on the vector
-    std::map<size_t, size_t> lookup;
-    for (size_t n = 0u; n < N; ++n)
+    initializePositions();
+    buildNeighbors();
+}
+
+//------------------------------------------------------------------------------
+void ForceDirectedGraph::initializePositions()
+{
+    const sf::Vector2f center(m_width * 0.5f, m_height * 0.5f);
+    const float radius = std::min(m_width, m_height) * 0.3f;
+    std::uniform_real_distribution<float> distribution(-radius, radius);
+
+    for (auto& v: m_vertices)
+    {
+        v.position.x = center.x + distribution(m_rng);
+        v.position.y = center.y + distribution(m_rng);
+    }
+}
+
+//------------------------------------------------------------------------------
+void ForceDirectedGraph::buildNeighbors()
+{
+    std::unordered_map<DiGraph::Node, size_t> lookup;
+    lookup.reserve(m_vertices.size());
+    for (size_t n = 0u; n < m_vertices.size(); ++n)
     {
         lookup[m_vertices[n].id] = n;
     }
 
-    // Add edges "source node" -> "destination node"
-    #pragma omp parallel for default(shared) schedule(dynamic)
-    for (size_t n = 0u; n < N; ++n)
+    // Undirected and deduplicated: a spring pulls both ends.
+    std::vector<std::unordered_set<DiGraph::Node>> neighbor_sets(m_vertices.size());
+    for (size_t n = 0u; n < m_vertices.size(); ++n)
     {
-        Vertex& v = m_vertices[n];
-        DiGraph::Neighbors const& neighbors = m_digraph.neighbors(v.id);
-        v.neighbors.resize(neighbors.size());
-
-        size_t i = neighbors.size();
-        while (i--)
+        for (DiGraph::Node const neighbor: m_digraph.neighbors(m_vertices[n].id))
         {
-           v.neighbors[i].position = &m_vertices[lookup[neighbors[i]]].position;
-           v.neighbors[i].id = m_vertices[lookup[neighbors[i]]].id;
+            auto const found = lookup.find(neighbor);
+            if (found == lookup.end())
+            {
+                continue;
+            }
+            neighbor_sets[n].insert(neighbor);
+            neighbor_sets[found->second].insert(m_vertices[n].id);
         }
     }
 
-    // We need undirected graph so add edges "destination node" -> "source node"
-    for (auto& vertex: m_vertices)
+    for (size_t n = 0u; n < m_vertices.size(); ++n)
     {
-        for (auto& neighbor: vertex.neighbors)
+        Vertex& v = m_vertices[n];
+        v.neighbors.clear();
+        v.neighbors.reserve(neighbor_sets[n].size());
+        for (DiGraph::Node const id: neighbor_sets[n])
         {
-           // Insert if not already present
-           Vertex& v = m_vertices[lookup[neighbor.id]];
-           size_t i = 0u;
-           while ((i < v.neighbors.size()) && (v.neighbors[i].id != vertex.id))
-               ++i;
-           if (i == v.neighbors.size())
-           {
-               v.neighbors.push_back({&vertex.position, vertex.id});
-           }
+            v.neighbors.push_back({ &m_vertices[lookup[id]].position, id });
         }
     }
 }
@@ -101,55 +121,85 @@ void ForceDirectedGraph::reset()
 //------------------------------------------------------------------------------
 void ForceDirectedGraph::update()
 {
-    if (m_temperature < 0.1f)
-        return ;
-
-    step();
+    for (int i = 0; i < params.steps_per_frame; ++i)
+    {
+        if (!isRunning())
+        {
+            return;
+        }
+        step();
+    }
 }
 
 //------------------------------------------------------------------------------
 void ForceDirectedGraph::step()
 {
-    #pragma omp parallel for default(shared) schedule(dynamic)
-    for (auto& v: m_vertices)
+    const size_t count = m_vertices.size();
+    if (count == 0u)
     {
-        // Repulsive forces: nodes -- nodes
-        for (auto& u: m_vertices)
-        {
-            if (u.id == v.id)
-                continue ;
+        return;
+    }
 
-            const sf::Vector2f direction(v.position - u.position);
-            const float dist = distance(direction);
-            const float rf = repulsive_force(dist);
-            v.displacement += direction / dist * rf;
+    const sf::Vector2f canvas_center(m_width * 0.5f, m_height * 0.5f);
+    const float norm = 1.0f / float(count);
+
+    #pragma omp parallel for schedule(dynamic)
+    for (size_t i = 0u; i < count; ++i)
+    {
+        Vertex& v = m_vertices[i];
+
+        // Repulsive forces: every node repels the others.
+        for (size_t j = 0u; j < count; ++j)
+        {
+            if (i == j)
+            {
+                continue;
+            }
+
+            const sf::Vector2f delta = v.position - m_vertices[j].position;
+            const float dist = distance(delta);
+            const float force = repulsive_force(dist);
+            v.displacement += delta * (force / dist * norm);
         }
 
-        // Attractive forces: edges
-        for (auto& u: v.neighbors)
+        // Attractive forces: a spring along each edge.
+        for (auto const& neighbor: v.neighbors)
         {
-            if (u.id == v.id)
-                continue ;
+            const sf::Vector2f delta = v.position - (*neighbor.position);
+            const float dist = distance(delta);
+            const float force = attractive_force(dist);
+            v.displacement -= delta * (force / dist * norm);
+        }
 
-            const sf::Vector2f direction(v.position - (*u.position));
-            const float dist = distance(direction);
-            const float af = attractive_force(dist);
-            v.displacement -= direction / dist * af;
+        // Gravity keeps a wide bookmark tree from spreading into a flat line.
+        if (params.gravity > 0.0f)
+        {
+            const sf::Vector2f to_center = canvas_center - v.position;
+            v.displacement += to_center * params.gravity;
         }
     }
 
-    // Update position and constrain position to the window bounds
-    #pragma omp parallel for default(shared) schedule(dynamic)
-    for (auto& v: m_vertices)
+    const float min_x = std::max(50.0f, LAYOUT_BORDER_X);
+    const float min_y = std::max(50.0f, LAYOUT_BORDER_Y);
+    const float max_x = m_width - min_x;
+    const float max_y = m_height - min_y;
+
+    #pragma omp parallel for schedule(static)
+    for (size_t i = 0u; i < count; ++i)
     {
-        const float dist = distance(v.displacement);
-        v.position += (dist > m_temperature)
-                      ? v.displacement * m_temperature / dist
-                      : v.displacement;
-        v.position.x = std::min(m_width - LAYOUT_BORDER_X,
-                                std::max(LAYOUT_BORDER_X, v.position.x));
-        v.position.y = std::min(m_height - LAYOUT_BORDER_Y,
-                                std::max(LAYOUT_BORDER_Y, v.position.y));
+        Vertex& v = m_vertices[i];
+        const float disp_len = distance(v.displacement);
+        if (disp_len > m_temperature)
+        {
+            v.position += v.displacement * (m_temperature / disp_len);
+        }
+        else
+        {
+            v.position += v.displacement;
+        }
+
+        v.position.x = std::min(max_x, std::max(min_x, v.position.x));
+        v.position.y = std::min(max_y, std::max(min_y, v.position.y));
         v.displacement = { 0.0f, 0.0f };
     }
 

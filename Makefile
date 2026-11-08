@@ -1,7 +1,7 @@
-###################################################
+###############################################################################
 # IslandedBrowser, built by MyMakefile 3.
 # https://github.com/Lecrapouille/MyMakefile
-###################################################
+###############################################################################
 
 PROJECT_NAME := IslandedBrowser
 PROJECT_VERSION := 0.1.0
@@ -10,6 +10,9 @@ LICENSE := MIT
 CXX_STANDARD := c++14
 PREFIX ?= /usr
 
+###############################################################################
+# Targets
+#
 TARGETS := IslandedBrowser
 IslandedBrowser.DESCRIPTION := Firefox bookmarks drawn as an island
 IslandedBrowser.SOURCES := src/*.cpp
@@ -25,8 +28,13 @@ IslandedBrowser.DATA := data
 M ?= .makefile
 include $(M)/MyMakefile.mk
 
-# Produced from the Firefox JSON export. Save bookmarks/bookmarks.json first.
-$(GEN_DIR)/Bookmarks.cpp: bookmarks/parser.py bookmarks/bookmarks.json
+###############################################################################
+# Bookmarks
+# Firefox export when present, otherwise the sample shipped with the sources.
+#
+BOOKMARKS_JSON := $(firstword $(wildcard bookmarks/bookmarks.json) bookmarks/sample.json)
+
+$(GEN_DIR)/Bookmarks.cpp: bookmarks/parser.py $(BOOKMARKS_JSON)
 	$(call print-to,Generating,bookmarks,$@)
 	$(Q)mkdir -p $(dir $@)
-	$(Q)./bookmarks/parser.py bookmarks/bookmarks.json $@
+	$(Q)./bookmarks/parser.py $(BOOKMARKS_JSON) $@

@@ -32,7 +32,7 @@ Step three: Save your Firefox bookmarks as JSON file into `IslandedBrowser/bookm
 
 Step four: Compile the IslandedBrowser:
 - `make`
-- The Makefile calls `bookmarks/parser.py`, which generates the C++ source from `bookmarks/bookmarks.json`.
+- The Makefile calls `bookmarks/parser.py`, which generates the C++ source from `bookmarks/bookmarks.json`. Without that file, `bookmarks/sample.json` is used.
 - You can run the application: `make run-IslandedBrowser`
 
 Step five: Click on an URL this will open your Firefox. Click on a node this will open all URLs as child.

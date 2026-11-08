@@ -37,10 +37,10 @@ class IslandedBrowser
 {
 public:
 
-    //! \brief Collection of bookmarks
-    using Bookmarks = std::map<int, Bookmark>;
-    //! \brief Collection of bookmark folders
-    using Folders = std::map<int, Folder>;
+    //! \brief Collection of bookmarks, indexed by the graph node.
+    using Bookmarks = std::map<DiGraph::Node, Bookmark>;
+    //! \brief Collection of bookmark folders, indexed by the graph node.
+    using Folders = std::map<DiGraph::Node, Folder>;
 
     //----------------------------------------------------------------------
     //! \brief Default constructor. Set the dimension of the layout.
@@ -75,7 +75,7 @@ public:
     }
 
     //----------------------------------------------------------------------
-    //! \brief Do a single step on the expension of the graph.
+    //! \brief Advance the force-directed layout by a few annealed steps.
     //----------------------------------------------------------------------
     void forceDirectedGraph();
 

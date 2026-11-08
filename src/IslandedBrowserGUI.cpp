@@ -94,7 +94,10 @@ void IslandedBrowserGUI::handleInput()
                 {
                     std::string command = BROWSER_NAME + url;
                     std::cout << "command: " << command << std::endl;
-                    system(command.c_str());
+                    if (std::system(command.c_str()) != 0)
+                    {
+                        std::cerr << "Failed to run: " << command << std::endl;
+                    }
                 }
             }
             break;
