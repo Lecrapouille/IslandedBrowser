@@ -1,6 +1,13 @@
 # IslandedBrowser
+# Personal data: exported bookmarks, organization, files for Firefox, cache.
+private/
+# Safety net if a personal export is saved elsewhere.
 *.json
 !bookmarks/sample.json
+!bookmarks/example.json
+islanded-browser.png
+__pycache__/
+*.pyc
 build/
 compile_commands.json
 *~
