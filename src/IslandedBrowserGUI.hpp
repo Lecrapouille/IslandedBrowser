@@ -27,13 +27,30 @@
 #  define ISLANDED_BROWSER_GUI_HPP
 
 #  include "Application.hpp"
-#  include "Drawable.hpp"
+#  include "Camera.hpp"
+#  include "Colors.hpp"
+#  include "DetailsPanel.hpp"
+#  include "HelpScreen.hpp"
 #  include "IslandedBrowser.hpp"
+#  include "MapPainter.hpp"
+#  include "MouseCursor.hpp"
+#  include "MouseTracker.hpp"
+#  include "Rivers.hpp"
+#  include "SearchBox.hpp"
+#  include "Selection.hpp"
+#  include "StatusBar.hpp"
+#  include "TextPainter.hpp"
+#  include "Toast.hpp"
+#  include "Tooltip.hpp"
 #  include <string>
-#  include <vector>
 
 // ****************************************************************************
-//! \brief Window showing the bookmark graph.
+//! \brief The window showing the bookmark map.
+//!
+//! This class is the conductor: it receives the mouse and keyboard events,
+//! decides what they mean, and asks the other classes to do the work (the
+//! Camera moves the view, the MapPainter draws the map, the panels draw
+//! themselves...).
 //!
 //! Mouse:
 //! - hover: tooltip near the cursor, the community of the node is
@@ -62,159 +79,87 @@ public:
                        std::string const& bookmarks_path,
                        std::string const& screenshot = std::string());
 
-private: // Derived from Application::GUI
+private: // Called by Application at each frame
 
-    virtual void draw() override;
-    virtual void update(const float dt) override;
     virtual void handleInput() override;
+    virtual void update(const float dt) override;
+    virtual void draw() override;
     virtual bool running() const override { return m_running; }
     virtual void activate() override;
     virtual void deactivate() override {}
     virtual void create() override {}
     virtual void release() override {}
 
-private: // Events
+private: // What the events mean
 
+    void onResized(sf::Vector2u size);
+    void onMousePressed(sf::Event::MouseButtonEvent const& button);
+    void onMouseReleased(sf::Event::MouseButtonEvent const& button);
+    void onMouseMoved(sf::Vector2i pixel);
+    //! \brief A left click (not a drag) ended at this pixel.
+    void onClick(sf::Vector2i pixel, bool control);
+    //! \brief Keys when the search field is closed.
     void onKeyPressed(sf::Event::KeyEvent const& key);
+    //! \brief Keys while the search field is open.
     void onSearchKey(sf::Event::KeyEvent const& key);
+    //! \brief Typed characters: the search text, or the shortcuts that
+    //! depend on the keyboard layout (/ + - ?).
     void onTextEntered(sf::Uint32 unicode);
-    void onLeftReleased(sf::Vector2i pixel, bool control);
-    void quit();
+    //! \brief Find what is under the mouse, then update the highlight and
+    //! the pointer.
+    void updatePointer();
 
 private: // Actions
 
     void select(size_t node);
+    //! \brief Open a bookmark in the web browser; for a folder, its first
+    //! MAX_TABS bookmarks.
     void open(size_t node);
+    //! \brief Glide and zoom so the node and its content fill the window (a
+    //! bookmark is shown with its community).
     void zoomOn(size_t node);
+    //! \brief Glide to the node without changing the zoom.
     void centerOn(size_t node);
+    //! \brief Visit the next (direction > 0) or previous search result.
     void nextMatch(int direction);
-    void updateMatches();
-    void updateFocus();
-    void updateCursor();
-
-private: // View
-
+    //! \brief Show the whole map.
     void fitView();
-    sf::Vector2f fitSize(sf::FloatRect box) const;
-    void zoom(float factor, sf::Vector2i pixel);
-    void pan(sf::Vector2f pixels);
-    //! \brief World units per pixel.
-    float scale() const;
-    //! \brief Node under the pixel, none when the pixel is on a panel.
-    size_t pickAt(sf::Vector2i pixel) const;
-    bool onPanel(sf::Vector2i pixel) const;
     void saveScreenshot(std::string const& path);
+    void quit();
 
-private: // Drawing
+private: // Questions
 
-    void drawEdges();
-    void drawNodes();
-    void drawNames();
-    void drawRivers();
-    void drawTooltip();
-    void drawPanel();
-    void drawSearch();
-    void drawStatusBar();
-    void drawHelp();
-    void drawToast();
-    void toast(std::string const& message);
-    void computeRivers();
-    sf::Color colorOf(ForceDirectedGraph::Vertex const& vertex) const;
-    sf::Color islandColor(size_t node) const;
-    bool dimmed(size_t node) const;
-    sf::String kindOf(size_t node) const;
-    //! \brief Write a text in interface coordinates, return its width.
-    float text(sf::String const& string, sf::Vector2f position, unsigned size,
-               sf::Color color, bool bold = false);
-    float textWidth(sf::String const& string, unsigned size, bool bold = false);
-    //! \brief Cut a text in lines no wider than width pixels.
-    std::vector<sf::String> wrap(sf::String const& string, float width,
-                                 unsigned size, size_t max_lines);
-    void box(sf::FloatRect const& rect, sf::Color fill = PANEL_COLOR,
-             sf::Color border = PANEL_BORDER_COLOR);
-
-    //! \brief Aggregated similarity between two islands (vertex indices of
-    //! the island nodes), strength normalized in ]0, 1].
-    struct River
-    {
-        size_t a;
-        size_t b;
-        float strength;
-    };
-
-    //! \brief Clickable line of the panel.
-    struct Row
-    {
-        sf::FloatRect box;
-        size_t node;
-    };
+    //! \brief Node under the pixel; none when the pixel is on a panel, on the
+    //! help or outside the window.
+    size_t pickAt(sf::Vector2i pixel) const;
+    //! \brief True when the pixel is on the status bar, the details panel or
+    //! the search field: the map is not under the mouse there.
+    bool onPanel(sf::Vector2i pixel) const;
+    //! \brief Width in pixels hidden on the right by the details panel.
+    float hiddenWidth() const;
+    StatusBar::Mode mode() const;
 
 private:
 
+    //! \brief The bookmarks and their layout.
     IslandedBrowser m_island;
-    //! \brief World view (graph) and interface view (texts).
-    sf::View m_world;
-    sf::View m_interface;
-    //! \brief Short notification (opened tabs, screenshot...).
-    sf::String m_toast;
-    sf::Clock m_toast_clock;
-    sf::Font m_font;
-    sf::Text m_text;
-    bool m_has_font = false;
-    //! \brief One color per island.
-    std::vector<sf::Color> m_palette;
-    //! \brief Strongest relations between islands.
-    std::vector<River> m_rivers;
-
-    //! \brief Node under the mouse, selected node.
-    size_t m_hovered = BookmarkNode::none;
-    size_t m_selected = BookmarkNode::none;
-    //! \brief Bookmarks similar to the selected one.
-    std::vector<std::pair<size_t, float>> m_related;
-    //! \brief Nodes kept bright (the others fade): indexed by node.
-    std::vector<char> m_focus;
-    bool m_has_focus = false;
-    //! \brief Clickable lines of the panel, its box (interface coordinates).
-    std::vector<Row> m_rows;
-    sf::FloatRect m_panel_box;
-    size_t m_hovered_row = BookmarkNode::none;
-
-    //! \brief Mouse buttons.
-    sf::Vector2i m_mouse;
-    sf::Vector2i m_press_pixel;
-    sf::Vector2i m_drag_last;
-    bool m_left_pressed = false;
-    bool m_right_pressed = false;
-    bool m_dragging = false;
-    sf::Clock m_click_clock;
-    size_t m_last_click = BookmarkNode::none;
-    sf::Cursor m_arrow_cursor;
-    sf::Cursor m_hand_cursor;
-    sf::Cursor m_move_cursor;
-    int m_cursor = -1;
-    bool m_has_cursors = false;
-
-    //! \brief The view follows the layout until the user zooms or pans.
-    bool m_auto_fit = true;
-    //! \brief Smooth move of the view toward a target.
-    bool m_animating = false;
-    sf::Vector2f m_target_center;
-    sf::Vector2f m_target_size;
-
-    //! \brief Search box.
-    bool m_searching = false;
-    bool m_skip_text = false;
-    sf::String m_query;
-    std::vector<size_t> m_matches;
-    size_t m_match = 0u;
-    sf::FloatRect m_search_box;
-    sf::Clock m_caret_clock;
-
+    TextPainter m_painter;
+    Camera m_camera;
+    Palette m_palette;
+    Rivers m_rivers;
+    Selection m_selection;
+    MapPainter m_map;
+    Tooltip m_tooltip;
+    DetailsPanel m_panel;
+    SearchBox m_search;
+    StatusBar m_status;
+    Toast m_toast;
+    HelpScreen m_help;
+    MouseTracker m_mouse;
+    MouseCursor m_cursor;
+    //! \brief The user stopped the layout (Space).
     bool m_paused = false;
-    bool m_show_links = true;
-    bool m_show_names = true;
-    bool m_show_help = false;
-    std::string m_file_name;
+    //! \brief See the constructor; cleared once the screenshot is saved.
     std::string m_screenshot;
     bool m_running = true;
 };

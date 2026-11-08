@@ -122,6 +122,15 @@ std::vector<size_t> IslandedBrowser::ancestors(size_t node) const
 }
 
 // -----------------------------------------------------------------------------
+size_t IslandedBrowser::community(size_t node) const
+{
+    BookmarkNode const& n = m_bookmarks.nodes[node];
+    if (n.isBookmark() && n.parent != BookmarkNode::none && n.parent != 0u)
+        return n.parent;
+    return node;
+}
+
+// -----------------------------------------------------------------------------
 std::vector<size_t> IslandedBrowser::search(std::string const& text) const
 {
     auto lower = [](std::string s) {

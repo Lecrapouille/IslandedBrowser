@@ -83,6 +83,12 @@ public:
     std::vector<size_t> ancestors(size_t node) const;
 
     //----------------------------------------------------------------------
+    //! \brief The group a node is shown with: for a bookmark, the folder
+    //! (community) holding it; for a folder, the folder itself.
+    //----------------------------------------------------------------------
+    size_t community(size_t node) const;
+
+    //----------------------------------------------------------------------
     //! \brief Nodes whose title or URL contains the text (case insensitive
     //! for ASCII letters). Folders come first, then bookmarks.
     //----------------------------------------------------------------------
